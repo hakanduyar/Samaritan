@@ -1,5 +1,7 @@
 # Architecture
 
+See [architecture decisions](decisions/README.md) for the current technology rationale, asset/runtime boundary and feature delivery policy. These decisions were documented on 2026-11-07; they do not claim an earlier alternatives benchmark.
+
 - `app/`: full-viewport page, shared styles and document metadata. The root redirects to `/samaritan`.
 - `src/contract/manifest.ts`: validates the local scene manifest and same-origin asset URLs.
 - `src/player/sceneRig.ts`: binds the imported camera and animation; evaluates exact authored time with Three's animation mixer.

@@ -39,6 +39,8 @@ A working local preview, not a production or accessibility certification. The pu
 
 ## How it works
 
+[Architecture decisions](docs/decisions/README.md) explain the technology choices, tradeoffs and conditions for revisiting them.
+
 Next.js and React host a Three.js player. A small manifest identifies the authoritative camera, animation, duration and screen anchors. No accounts, analytics service or application backend are configured. See [architecture](docs/ARCHITECTURE.md) and [asset provenance](ASSETS.md).
 
 ## AI-assisted development
