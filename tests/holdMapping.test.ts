@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {createHoldMap,navigationMap} from '../src/player/holdMapping';
+import {createHoldMap,navigationMap,focusEntry,withinFocus} from '../src/player/holdMapping';
 import {advanceNavigation,navigationTarget} from '../src/player/navigation';
 import {validateManifest} from '../src/contract/manifest';
 import admission from '../src/player/holdAdmission.json';
@@ -38,4 +38,14 @@ it('crosses a hold forward and backward with residual velocity without changing 
  current=map.toNavigation(3.5);target=navigationTarget(current,current,.1);
  expect(map.toClip(current)).toBeCloseTo(3.5);
  expect(map.toClip(target)).toBeCloseTo(5);
+});
+
+it('captures only first focus entry in either direction, never rests or fresh travel inside',()=>{
+ const holds=[{holdStart:2,holdEnd:5}];
+ expect(focusEntry(1.9,2.1,holds)).toBe(2);
+ expect(focusEntry(5.1,4.9,holds)).toBe(5);
+ expect(focusEntry(2,2.1,holds)).toBeNull();
+ expect(focusEntry(3,6,holds)).toBeNull();
+ expect(focusEntry(0,.9,holds)).toBeNull();
+ expect(withinFocus(3,holds)).toBe(true);
 });
