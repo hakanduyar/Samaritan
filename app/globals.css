@@ -1,0 +1,93 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: #c8c8c8;
+  font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+.ref-player {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+.ref-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.ref-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #8c8c8c;
+}
+
+.ref-status p {
+  margin: 0;
+}
+
+.ref-status-title {
+  color: #d0d0d0;
+}
+
+.ref-status-detail {
+  max-width: 60ch;
+}
+
+.ref-qa {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid #333;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.ref-qa input[type="range"] {
+  flex: 1 1 200px;
+}
+
+.ref-qa button {
+  font: inherit;
+  color: #ddd;
+  background: #161616;
+  border: 1px solid #444;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.ref-index {
+  padding: 24px;
+}
+
+.ref-index a {
+  color: #ddd;
+}
+
+/* Isolated interactive treatment; no fabricated network percentage. */
+.sam-startup { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f7f7f6; color:#262626; pointer-events:auto; }
+.sam-symbol { width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent; border-top:15px solid #b52027; margin-bottom:24px; }
+.sam-command { height:32px; min-width:180px; text-align:center; font:500 20px/32px Arial,sans-serif; letter-spacing:3px; }
+.sam-underline { width:190px; height:2px; margin-top:7px; background:#b52027; }
+.sam-symbol.waiting { animation:sam-wait 1.6s ease-in-out infinite; }
+@keyframes sam-wait { 50% { opacity:.35; } }
+@media(prefers-reduced-motion:reduce) { .sam-symbol.waiting { animation:none; } }
