@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "world": "samaritan",
+  "cameraName": "route_camera_lens",
+  "clipName": "samaritan_interactive",
+  "durationSeconds": 80.64917,
+  "timeBasis": "authored",
+  "source": null,
+  "framingAspectRatio": 1.7777777777777777,
+  "focalScreenName": "focal_screen",
+  "backgroundColor": "#f7f7f6",
+  "anchors": [
+    {
+      "screen": "screen_01",
+      "anchorNode": "anchor_screen_01",
+      "holdStart": 7.12,
+      "holdEnd": 10.320001
+    },
+    {
+      "screen": "screen_02",
+      "anchorNode": "anchor_screen_02",
+      "holdStart": 19.559999,
+      "holdEnd": 22.76
+    },
+    {
+      "screen": "screen_03",
+      "anchorNode": "anchor_screen_03",
+      "holdStart": 32.560001,
+      "holdEnd": 35.760002
+    },
+    {
+      "screen": "screen_04",
+      "anchorNode": "anchor_screen_04",
+      "holdStart": 46.120003,
+      "holdEnd": 49.320004
+    },
+    {
+      "screen": "screen_05",
+      "anchorNode": "anchor_screen_05",
+      "holdStart": 59.400005,
+      "holdEnd": 62.600006
+    },
+    {
+      "screen": "focal_screen",
+      "anchorNode": "anchor_focal_screen",
+      "holdStart": 73.249176,
+      "holdEnd": 76.449173
+    }
+  ],
+  "sceneUrl": "./scene.glb",
+  "referenceFrames": [
+    {
+      "timeSeconds": 8.72,
+      "evidencePath": "hold-1"
+    },
+    {
+      "timeSeconds": 21.16,
+      "evidencePath": "hold-2"
+    },
+    {
+      "timeSeconds": 34.160001,
+      "evidencePath": "hold-3"
+    },
+    {
+      "timeSeconds": 47.720003,
+      "evidencePath": "hold-4"
+    },
+    {
+      "timeSeconds": 61.000006,
+      "evidencePath": "hold-5"
+    },
+    {
+      "timeSeconds": 74.849175,
+      "evidencePath": "hold-6"
+    }
+  ]
+}
