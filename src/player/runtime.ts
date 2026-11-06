@@ -21,6 +21,8 @@ import {
 import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SECONDS } from "./navigation";
 import { createAmbientRails } from "./ambient";
 
+import { createHoldMap, navigationMap } from './holdMapping';
+
 export const MAX_PIXEL_RATIO = 1.5;
 const MAX_FRAME_DELTA_SECONDS = 0.1;
 const TOUCH_PIXELS_PER_CLIP = 24000;
@@ -115,6 +117,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let currentTime = 0;
   let targetTime = 0;
   let navigationVelocity = 0;
+  let manualMap = createHoldMap(1, []);
   const heldKeys = new Map<string, number>();
   let heldSeconds = 0;
   let playing = false;
@@ -204,7 +207,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       heldSeconds += dt;
       if (heldSeconds >= HOLD_DELAY_SECONDS) {
         const direction = Math.sign([...heldKeys.values()].reduce((a, b) => a + b, 0));
-        targetTime = clampTime(currentTime + direction * MAX_PENDING_SECONDS, rig.duration);
+        targetTime = manualMap.toClip(manualMap.toNavigation(currentTime) + direction * MAX_PENDING_SECONDS);
       }
     }
     if (playing) {
@@ -214,9 +217,11 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     } else if (currentTime !== targetTime || navigationVelocity !== 0) {
       if (exact) { currentTime = targetTime; navigationVelocity = 0; }
       else {
-        const next = advanceNavigation(currentTime, targetTime, navigationVelocity, dt);
-        currentTime = clampTime(next.current, rig.duration);
-        navigationVelocity = currentTime === next.current ? next.velocity : 0;
+        const navTarget = manualMap.toNavigation(targetTime);
+        const next = advanceNavigation(manualMap.toNavigation(currentTime), navTarget, navigationVelocity, dt);
+        const navCurrent = clampTime(next.current, manualMap.duration);
+        currentTime = navCurrent === navTarget ? targetTime : manualMap.toClip(navCurrent);
+        navigationVelocity = navCurrent === next.current ? next.velocity : 0;
       }
     }
     let ambientFrame = false;
@@ -249,7 +254,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const applyManualDelta = (delta: number) => {
     if (!rig) return;
     playing = false;
-    setTarget(exact ? targetTime + delta : navigationTarget(currentTime, targetTime, delta), exact);
+    setTarget(exact ? targetTime + delta : manualMap.toClip(navigationTarget(manualMap.toNavigation(currentTime), manualMap.toNavigation(targetTime), delta)), exact);
   };
 
   const togglePlay = () => {
@@ -333,7 +338,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         wheel.preventDefault();
         if (!interactionReady || doc.hidden) return;
         playing = false;
-        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, rig.duration);
+        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.duration);
         applyManualDelta(delta);
       },
       { passive: false },
@@ -388,7 +393,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       const dy = touchY - pointer.clientY;
       touchY = pointer.clientY;
       playing = false;
-      applyManualDelta((dy / TOUCH_PIXELS_PER_CLIP) * rig.duration);
+      applyManualDelta((dy / TOUCH_PIXELS_PER_CLIP) * manualMap.duration);
     });
     const endTouch = () => {
       touchY = null;
@@ -459,6 +464,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       return;
     }
     manifest = validation.manifest;
+    manualMap = navigationMap(manifest, exact);
     marker.dataset.stage = "scene-assets";
     if (params.requestedTime !== null && params.requestedTime > manifest.durationSeconds) {
       fail(

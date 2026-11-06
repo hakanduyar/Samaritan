@@ -479,3 +479,34 @@ it('integrates actual selected rails with intro release, hidden pause, reverse s
  expect(selected.position.y).toBe(base);runFrames(120,16);expect(selected.position.y).not.toBe(base);
  expect(m.handle.controller.getSnapshot()?.time).toBe(0);
 });
+
+it('maps admitted manual holds while playback and exact seeks retain authored time',async()=>{
+ const world='samaritan';
+ const nativeFetch=globalThis.fetch;
+ const manifest=JSON.parse(readFileSync('public/assets/'+world+'/manifest.json','utf8'));
+ const scenePath='/assets/'+world+'/'+manifest.sceneUrl.replace(/^\.\//,'');
+ const bytes=readFileSync('public'+scenePath);
+ vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
+ vi.stubGlobal('createImageBitmap',async()=>({width:1,height:1,close(){}}));
+ installEnvironment({['/assets/'+world+'/manifest.json']:()=>Response.json(manifest),[scenePath]:()=>new Response(bytes)});
+ const routedFetch=globalThis.fetch;
+ vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
+ const m=track(mount({},world));
+ await until(()=>m.marker.dataset.state==='ready','actual admitted route ready');
+ const hold=manifest.anchors[0],mid=(hold.holdStart+hold.holdEnd)/2;
+ m.handle.controller.seek(mid);runFrames(1,0);
+ const position=m.renderer.frames.at(-1)!.position;
+ m.handle.controller.togglePlay();runFrames(2,100);
+ const afterPlayback=m.handle.controller.getSnapshot()!.time;
+ expect(afterPlayback).toBeGreaterThan(mid);expect(afterPlayback-mid).toBeLessThanOrEqual(.201);
+ expect(m.renderer.frames.at(-1)!.position).toEqual(position);
+ wheel(m.host,100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.playing).toBe(false);
+ const forward=m.handle.controller.getSnapshot()!.time;
+ expect(forward).toBeGreaterThan(hold.holdEnd); // 100px crosses, old ~800px hold cannot
+ wheel(m.host,-100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(afterPlayback,5);
+ expect(m.renderer.frames.at(-1)!.position).toEqual(position);
+ m.handle.controller.seek(mid);runFrames(1,0);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(mid);
+});
