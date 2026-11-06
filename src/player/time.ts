@@ -75,10 +75,11 @@ export function wheelDeltaSeconds(
   deltaMode: number,
   viewportHeight: number,
   duration: number,
+  pixelsPerClip = WHEEL_PIXELS_PER_CLIP,
 ): number {
   const pixels =
     deltaMode === 1 ? deltaY * WHEEL_LINE_PX : deltaMode === 2 ? deltaY * viewportHeight : deltaY;
-  return (pixels / WHEEL_PIXELS_PER_CLIP) * duration;
+  return (pixels / pixelsPerClip) * duration;
 }
 
 export type KeyCommand =

@@ -21,11 +21,12 @@ import {
 import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SECONDS } from "./navigation";
 import { createAmbientRails } from "./ambient";
 
-import { createHoldMap, navigationMap } from './holdMapping';
+import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
 
 export const MAX_PIXEL_RATIO = 1.5;
 const MAX_FRAME_DELTA_SECONDS = 0.1;
-const TOUCH_PIXELS_PER_CLIP = 24000;
+const MANUAL_PIXELS_PER_ROUTE = 16000;
+const REFERENCE_PIXELS_PER_ROUTE = 24000;
 
 export interface RendererLike {
   domElement: HTMLCanvasElement;
@@ -222,6 +223,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         const navCurrent = clampTime(next.current, manualMap.duration);
         currentTime = navCurrent === navTarget ? targetTime : manualMap.toClip(navCurrent);
         navigationVelocity = navCurrent === next.current ? next.velocity : 0;
+        const focus = heldKeys.size ? null : focusEntry(before, currentTime, manualMap.focusHolds);
+        if (focus !== null) { currentTime = focus; targetTime = focus; navigationVelocity = 0; }
       }
     }
     let ambientFrame = false;
@@ -338,7 +341,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         wheel.preventDefault();
         if (!interactionReady || doc.hidden) return;
         playing = false;
-        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.duration);
+        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.duration, exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE);
         applyManualDelta(delta);
       },
       { passive: false },
@@ -367,7 +370,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     });
     listen(win, "keyup", (event) => {
       heldKeys.delete((event as KeyboardEvent).key);
-      if (!heldKeys.size) heldSeconds = 0;
+      if (!heldKeys.size) {
+        heldSeconds = 0;
+        if (!exact && withinFocus(currentTime, manualMap.focusHolds)) { targetTime = currentTime; navigationVelocity = 0; requestRender(); }
+      }
     });
     listen(win, "blur", () => {
       heldKeys.clear(); heldSeconds = 0;
@@ -393,9 +399,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       const dy = touchY - pointer.clientY;
       touchY = pointer.clientY;
       playing = false;
-      applyManualDelta((dy / TOUCH_PIXELS_PER_CLIP) * manualMap.duration);
+      applyManualDelta((dy / (exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE)) * manualMap.duration);
     });
     const endTouch = () => {
+      if (!exact && withinFocus(currentTime, manualMap.focusHolds)) { targetTime = currentTime; navigationVelocity = 0; requestRender(); }
       touchY = null;
       touchId = null;
     };

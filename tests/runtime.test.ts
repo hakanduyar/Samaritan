@@ -264,15 +264,15 @@ describe("interactive mode", () => {
     expect(m.marker.dataset.time).toBe("0.000000");
     const start = m.renderer.frames.at(-1);
 
-    wheel(m.host, 3000);
+    wheel(m.host, 2000);
     await until(() => m.marker.dataset.settled === "true", "first half step");
-    wheel(m.host, 3000);
+    wheel(m.host, 2000);
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "1.000000", "settle at 1");
     expect(m.renderer.frames.at(-1)).toEqual({ camera: "route_camera", position: [0, 1, 8] });
 
-    wheel(m.host, -3000);
+    wheel(m.host, -2000);
     await until(() => m.marker.dataset.settled === "true", "first reverse step");
-    wheel(m.host, -3000);
+    wheel(m.host, -2000);
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "0.000000", "settle at 0");
     expect(m.renderer.frames.at(-1)).toEqual(start);
     expect(rafQueue.size).toBe(0); // settled: no further frame work
@@ -505,8 +505,36 @@ it('maps admitted manual holds while playback and exact seeks retain authored ti
  const forward=m.handle.controller.getSnapshot()!.time;
  expect(forward).toBeGreaterThan(hold.holdEnd); // 100px crosses, old ~800px hold cannot
  wheel(m.host,-100);runFrames(300,16);
- expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(afterPlayback,5);
+ expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(hold.holdEnd,5); // reverse entry consumes old backlog
+ runFrames(120,16);expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(hold.holdEnd,5);
+ wheel(m.host,-10);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeLessThan(hold.holdEnd);
+ expect(m.handle.controller.getSnapshot()!.time).toBeGreaterThan(hold.holdStart);
  expect(m.renderer.frames.at(-1)!.position).toEqual(position);
  m.handle.controller.seek(mid);runFrames(1,0);
  expect(m.handle.controller.getSnapshot()!.time).toBe(mid);
+ m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);
+ wheel(m.host,1000);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
+ runFrames(120,16);expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ wheel(m.host,100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeGreaterThan(hold.holdEnd);
+ // Releasing held input inside a photo cancels pending travel immediately.
+ m.handle.controller.seek(mid);runFrames(1,0);
+ window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));runFrames(2,16);
+ window.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight'}));
+ const released=m.handle.controller.getSnapshot()!.time;runFrames(120,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(released);
+ expect(released).toBeGreaterThanOrEqual(hold.holdStart);expect(released).toBeLessThan(hold.holdEnd);
+ // Continuous held input deliberately traverses; OS repeat frequency adds nothing.
+ const heldTravel=(repeat:boolean)=>{
+   m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);
+   window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));
+   for(let i=0;i<90;i++){if(repeat)window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',repeat:true}));runFrames(1,16);}
+   const result=m.handle.controller.getSnapshot()!.time;
+   window.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight'}));return result;
+ };
+ const held=heldTravel(false);expect(held).toBeGreaterThan(hold.holdEnd);
+ expect(heldTravel(true)).toBeCloseTo(held,8);
 });
