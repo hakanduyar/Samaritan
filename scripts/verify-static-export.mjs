@@ -27,7 +27,8 @@ const origin='http://127.0.0.1:'+server.address().port;
 const get=async(path)=>{const r=await fetch(origin+path);if(!r.ok)throw Error('HTTP '+r.status+' '+path);return r;};
 try{
  const hasOpening=await stat(resolve(root,'opening-candidate/index.html')).then(()=>true,()=>false);
- for(const path of [base+'/',base+'/'+world+'/?mode=reference&t=1.5&qa=1',...(hasOpening?[base+'/opening-candidate/']:[])]){
+ const hasStraight=await stat(resolve(root,'opening-straight/index.html')).then(()=>true,()=>false);
+ for(const path of [base+'/',base+'/'+world+'/?mode=reference&t=1.5&qa=1',...(hasOpening?[base+'/opening-candidate/']:[]),...(hasStraight?[base+'/opening-straight/']:[])]){
   const html=await(await get(path)).text();
   const scripts=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1].replaceAll('&amp;','&'));
   if(!scripts.length)throw Error('No client scripts');
@@ -54,6 +55,16 @@ try{
   if(base&&(await fetch(origin+prefix+'opening-metadata.json')).status!==404)throw Error('Unexpected root opening fallback');
  }
  if(base&&(await fetch(origin+'/assets/'+world+'/manifest.json')).status!==404)throw Error('Unexpected root asset fallback');
+ if(hasStraight){
+  const prefix='/assets/samaritan/opening-straight/';
+  const revision=createHash('sha256').update(await readFile('public'+prefix+'opening-metadata.json')).update(await readFile('public'+prefix+'samaritan-opening.glb')).digest('hex');
+  if(!clientSource.includes(revision))throw Error('Client lacks straight opening revision');
+  for(const name of ['opening-metadata.json','samaritan-opening.glb']){
+   const actual=Buffer.from(await(await get(base+prefix+name+'?revision='+revision)).arrayBuffer());
+   if(hash(actual)!==hash(await readFile('public'+prefix+name)))throw Error('Straight opening asset mismatch');
+  }
+  if(base&&(await fetch(origin+prefix+'opening-metadata.json')).status!==404)throw Error('Unexpected root straight opening fallback');
+ }
  console.log(JSON.stringify({result:'PASS',world,base,sceneSha256:hash(served),url:origin+base+'/'}));
  if(!process.argv.includes('--serve'))server.close();
 }catch(error){server.close();throw error;}

@@ -12,6 +12,8 @@ This is an unofficial fan interface, not a surveillance service or an official p
 
 [Try the optional opening sequence](https://hakanduyar.github.io/Samaritan/opening-candidate/). This separate preview returns to the interactive world; it does not replace the default demo.
 
+[Try the straight-forward opening](https://hakanduyar.github.io/Samaritan/opening-straight/): travel through the screen field toward a distant pane, reach the command screen, then enter the normal interactive world. This newer optional route preserves the earlier opening above. Its timing is an authored adaptation, not a frame-exact recreation of the series.
+
 Use a WebGL-capable browser with hardware acceleration available. A landscape viewport fits the authored camera framing best; portrait layout and lower-powered devices still need broader testing. This is an experimental preview, not a guarantee of smooth performance on every device.
 
 The default demo does not automatically include every experimental scene or opening candidate. For a reproducible static build and deployment procedure, see [Static demo deployment](docs/STATIC-DEMO.md).
