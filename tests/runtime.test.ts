@@ -456,7 +456,7 @@ it('integrates actual selected rails with intro release, hidden pause, reverse s
  vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
  const m=track(mount({},'samaritan',false));
  await until(()=>m.marker.dataset.state==='ready','actual world ready');
- expect(m.marker.dataset.ambientRails).toBe('8');
+ expect(m.marker.dataset.ambientRails).toBe('14');
  const rail=m.renderer.scene!.getObjectByName('strip_072_b2')!;
  let cell:Mesh|null=null;
  rail.traverse(n=>{if(n instanceof Mesh&&!Array.isArray(n.material)&&n.material.name==='mat_field_cell_b2')cell=n;});

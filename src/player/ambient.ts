@@ -5,7 +5,13 @@ import { Mesh, PropertyBinding, type AnimationClip, type Object3D } from "three"
 export const AMBIENT_RAILS = [
   "strip_044_b2", "strip_072_b2", "strip_088_b2", "strip_113_b2",
   "strip_141_b2", "strip_065_b3", "strip_085_b3", "strip_118_b3",
+  "strip_030_b2", "strip_064_b2", "strip_096_b2", "strip_039_b3",
+  "strip_101_b3", "strip_142_b3",
 ] as const;
+
+// The six appended pairs have verified continuous support over ±0.25 only.
+// Decorative ticks can extend indexed bounds without extending that support.
+const EXTENDED_RAILS = new Set<string>(AMBIENT_RAILS.slice(8));
 
 function related(a: Object3D, b: Object3D) {
   for (let p: Object3D | null = a; p; p = p.parent) if (p === b) return true;
@@ -47,8 +53,9 @@ export function createAmbientRails(root: Object3D, clips: AnimationClip[], prote
     });
     if (!line || !cell || line === cell) continue;
     const [railMin, railMax] = yBounds(line), [cellMin, cellMax] = yBounds(cell);
-    const low = Math.max(-0.45, railMin - cellMin + 0.01);
-    const high = Math.min(0.45, railMax - cellMax - 0.01);
+    const limit = EXTENDED_RAILS.has(name) ? 0.25 : 0.45;
+    const low = Math.max(-limit, railMin - cellMin + 0.01);
+    const high = Math.min(limit, railMax - cellMax - 0.01);
     if (low >= 0 || high <= 0) continue;
     selected.push({ name, mesh: cell, base: cell.position.y, low, high, period: 10 + (i % 4) * 2, delay: i * 0.17, reverse: i % 2 === 1 });
   }

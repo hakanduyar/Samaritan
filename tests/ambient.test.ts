@@ -17,7 +17,19 @@ it('actual GLB parser selects only bounded static cell primitives, preserving an
  const manifest=JSON.parse(readFileSync('public/assets/samaritan/manifest.json','utf8'));
  const names=manifest.anchors.flatMap((a:{screen:string;anchorNode:string})=>[a.screen,a.anchorNode]);
  const ambient=createAmbientRails(gltf.scene,gltf.animations,names);
- expect(ambient.selection).toHaveLength(8);
+ expect(ambient.selection).toHaveLength(14);
+ expect(ambient.selection.slice(0,8).map(({name,period})=>({name,period}))).toEqual([
+   {name:'strip_044_b2',period:10},{name:'strip_072_b2',period:12},
+   {name:'strip_088_b2',period:14},{name:'strip_113_b2',period:16},
+   {name:'strip_141_b2',period:10},{name:'strip_065_b3',period:12},
+   {name:'strip_085_b3',period:14},{name:'strip_118_b3',period:16},
+ ]);
+ expect(ambient.selection.slice(8).map(({name})=>name)).toEqual([
+   'strip_030_b2','strip_064_b2','strip_096_b2','strip_039_b3','strip_101_b3','strip_142_b3',
+ ]);
+ for(const {low,high} of ambient.selection.slice(8)){
+   expect(low).toBeCloseTo(-.25);expect(high).toBeCloseTo(.25);
+ }
  const positions=new Map<string,number[]>();let count=0;
  gltf.scene.traverse(n=>{positions.set(n.uuid,n.position.toArray());count++;});
  const rig=createSceneRig(gltf.scene,gltf.animations,manifest);
