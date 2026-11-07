@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Mesh, Vector3, type Camera, type ColorRepresentation, type Object3D } from "three";
+import { BufferGeometry, Mesh, Vector3, type Camera, type ColorRepresentation, type Object3D } from "three";
 import { readFileSync } from "node:fs";
 import { URL as NodeURL } from "node:url";
 import { Blob as NodeBlob } from "node:buffer";
@@ -106,6 +106,23 @@ function sceneRoutes(world: "samaritan" | "machine", fixture?: FixtureOptions, m
     [`/assets/${world}/${world}.glb`]: () => new Response(buildContractGlb(fixture)),
   };
 }
+
+it('disposes a late world result when the parallel opening request has failed',async()=>{
+ installEnvironment(sceneRoutes('samaritan'));
+ const originalFetch=globalThis.fetch;
+ let release!:()=>void;const pending=new Promise<void>(resolve=>{release=resolve;});
+ vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
+  const url=typeof input==='string'?input:input instanceof URL?input.href:input.url;
+  if(new URL(url).pathname==='/assets/samaritan/samaritan.glb')await pending;
+  return originalFetch(input,init);
+ });
+ const dispose=vi.spyOn(BufferGeometry.prototype,'dispose');
+ const m=track(mount({},'samaritan',false,true));
+ await until(()=>m.marker.dataset.state==='error','opening error without waiting for world');
+ expect(m.rendererCreated()).toBe(false);
+ release();await until(()=>dispose.mock.calls.length>0,'late world resource cleanup');
+ expect(m.marker.dataset.state).toBe('error');expect(m.rendererCreated()).toBe(false);
+});
 
 interface Mounted {
   handle: PlayerHandle;
@@ -558,7 +575,7 @@ it('maps admitted manual holds while playback and exact seeks retain authored ti
 it('integrates real opening into one clock with early input/hidden guards and same-pose handoff',async()=>{
  const paint=vi.fn();
  vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({fillRect(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},fillText:paint} as unknown as CanvasRenderingContext2D);
- let decodeStarted=false,releaseDecode!:()=>void;const decodeGate=new Promise<void>(resolve=>{releaseDecode=resolve;});
+ let openingRequested=false;let decodeStarted=false,releaseDecode!:()=>void;const decodeGate=new Promise<void>(resolve=>{releaseDecode=resolve;});
  const nativeFetch=globalThis.fetch;
  const manifest=JSON.parse(readFileSync('public/assets/samaritan/manifest.json','utf8'));
  const worldBytes=readFileSync('public/assets/samaritan/scene.glb');
@@ -566,10 +583,10 @@ it('integrates real opening into one clock with early input/hidden guards and sa
  const metadata=JSON.parse(readFileSync('public/assets/samaritan/opening/opening-metadata.json','utf8'));
  vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
  vi.stubGlobal('createImageBitmap',async()=>{decodeStarted=true;await decodeGate;return {width:1,height:1,close(){}};});
- installEnvironment({'/assets/samaritan/manifest.json':()=>Response.json(manifest),'/assets/samaritan/scene.glb':()=>new Response(worldBytes),'/assets/samaritan/opening/opening-metadata.json':()=>Response.json(metadata),'/assets/samaritan/opening/samaritan-opening.glb':()=>new Response(openingBytes)});
+ installEnvironment({'/assets/samaritan/manifest.json':()=>Response.json(manifest),'/assets/samaritan/scene.glb':()=>new Response(worldBytes),'/assets/samaritan/opening/opening-metadata.json':()=>{openingRequested=true;return Response.json(metadata)},'/assets/samaritan/opening/samaritan-opening.glb':()=>new Response(openingBytes)});
  const routedFetch=globalThis.fetch;vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
  const m=track(mount({},'samaritan',false,true));
- await until(()=>decodeStarted,'real image decode pending');runFrames(120,100);
+ await until(()=>decodeStarted,'real image decode pending');expect(openingRequested).toBe(true);runFrames(120,100);
  expect(m.marker.dataset.state).not.toBe('ready');expect(m.openingStates).toHaveLength(0);
  releaseDecode();await until(()=>m.marker.dataset.state==='ready','both real bundles ready');
  const first=m.renderer.frames[0]!.position;
@@ -609,7 +626,7 @@ it('integrates real opening into one clock with early input/hidden guards and sa
 it('integrates straight opening into one clock with early input/hidden guards and same-pose handoff',async()=>{
  const paint=vi.fn();
  vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({fillRect(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},fillText:paint,measureText:(text:string)=>({width:text.length*29})} as unknown as CanvasRenderingContext2D);
- let decodeStarted=false,releaseDecode!:()=>void;const decodeGate=new Promise<void>(resolve=>{releaseDecode=resolve;});
+ let openingRequested=false;let decodeStarted=false,releaseDecode!:()=>void;const decodeGate=new Promise<void>(resolve=>{releaseDecode=resolve;});
  const nativeFetch=globalThis.fetch;
  const manifest=JSON.parse(readFileSync('public/assets/samaritan/manifest.json','utf8'));
  const worldBytes=readFileSync('public/assets/samaritan/scene.glb');
@@ -617,10 +634,10 @@ it('integrates straight opening into one clock with early input/hidden guards an
  const metadata=JSON.parse(readFileSync('public/assets/samaritan/opening-straight/opening-metadata.json','utf8'));
  vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
  vi.stubGlobal('createImageBitmap',async()=>{decodeStarted=true;await decodeGate;return {width:1,height:1,close(){}};});
- installEnvironment({'/assets/samaritan/manifest.json':()=>Response.json(manifest),'/assets/samaritan/scene.glb':()=>new Response(worldBytes),'/assets/samaritan/opening-straight/opening-metadata.json':()=>Response.json(metadata),'/assets/samaritan/opening-straight/samaritan-opening.glb':()=>new Response(openingBytes)});
+ installEnvironment({'/assets/samaritan/manifest.json':()=>Response.json(manifest),'/assets/samaritan/scene.glb':()=>new Response(worldBytes),'/assets/samaritan/opening-straight/opening-metadata.json':()=>{openingRequested=true;return Response.json(metadata)},'/assets/samaritan/opening-straight/samaritan-opening.glb':()=>new Response(openingBytes)});
  const routedFetch=globalThis.fetch;vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
  const m=track(mount({},'samaritan',false,'straight'));
- await until(()=>decodeStarted,'real image decode pending');runFrames(120,100);
+ await until(()=>decodeStarted,'real image decode pending');expect(openingRequested).toBe(true);runFrames(120,100);
  expect(m.marker.dataset.state).not.toBe('ready');expect(m.openingStates).toHaveLength(0);
  releaseDecode();await until(()=>m.marker.dataset.state==='ready','both real bundles ready');
  const first=m.renderer.frames[0]!.position;
