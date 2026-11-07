@@ -25,7 +25,7 @@ export async function loadOpeningSequence(origin:string,signal:AbortSignal,strai
  try {
   const rig=createSceneRig(gltf.scene,gltf.animations,{cameraName:meta.openingCameraName,clipName:meta.openingClipName,durationSeconds:meta.durationSeconds,focalScreenName:meta.paneNode});
   cleanupRig=()=>rig.dispose();
-  const clock=createOpeningClock(meta);
+  const clock=createOpeningClock(meta,straight?1.12:1);
   const pane=straight?createStraightOpeningPane(gltf.scene,meta.paneNode):createOpeningPane(gltf.scene,meta.paneNode);
   cleanupPane=()=>pane.dispose();
   const vignette=createOpeningVignette(gltf.scene);

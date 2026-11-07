@@ -9,7 +9,8 @@ export function validateOpening(value:unknown,straight=false):OpeningContract {
  return m;
 }
 /** One foreground clock; discarded phase overshoot guarantees commands get a presented dwell. */
-export function createOpeningClock(meta:OpeningContract){
+export function createOpeningClock(meta:OpeningContract,travelRate=1){
+ if(!Number.isFinite(travelRate)||travelRate<=0)throw Error('Invalid opening travel rate');
  let phase:OpeningPhase='connection',elapsed=0;
  const snapshot=()=>({phase,clipTime:phase==='connection'?0:phase==='world'?elapsed:phase==='commands'?meta.phases.paneHold.start:phase==='return'?meta.phases.return.start+elapsed:meta.durationSeconds,command:phase==='commands'?['WHAT','ARE','YOUR','COMMANDS','SAMARITAN'][Math.min(4,Math.floor(elapsed/.6))]!:''});
  return {snapshot,advance(seconds:number,reduced:boolean){
@@ -18,7 +19,7 @@ export function createOpeningClock(meta:OpeningContract){
   if(phase==='connection'){elapsed+=delta;if(elapsed>=1){phase=reduced?'commands':'world';elapsed=0;}return snapshot();}
   if(reduced&&phase==='world'){phase='commands';elapsed=0;return snapshot();}
   if(reduced&&phase==='return'){phase='complete';elapsed=0;return snapshot();}
-  elapsed+=delta;
+  elapsed+=delta*(phase==='world'?travelRate:1);
   if(phase==='world'&&elapsed>=meta.phases.approach.end){phase='commands';elapsed=0;}
   else if(phase==='commands'&&elapsed>=3){phase=reduced?'complete':'return';elapsed=0;}
   else if(phase==='return'&&elapsed>=meta.durationSeconds-meta.phases.return.start){phase='complete';elapsed=0;}
