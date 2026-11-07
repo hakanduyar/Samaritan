@@ -647,13 +647,13 @@ it('integrates straight opening into one clock with early input/hidden guards an
  expect(m.openingStates.at(-1)!.phase).toBe('connection');
  const vignette=m.renderer.scene!.getObjectByName('fx_vignette') as Mesh;
  const vignetteOpacity=()=>Array.isArray(vignette.material)?NaN:vignette.material.opacity;
- expect(vignetteOpacity()).toBe(1);
+ expect(vignetteOpacity()).toBe(0);
  const pane=m.renderer.scene!.getObjectByName('focal_screen') as Mesh;
  const geometry=pane.geometry,originalUv=Array.from(geometry.getAttribute('uv').array),originalMaterial=pane.material;
  wheel(m.host,3000);m.handle.controller.seek(20);m.handle.controller.setInteractionReady();
  expect(m.handle.controller.getSnapshot()!.targetTime).toBe(0);
  runFrames(110,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
- expect(vignetteOpacity()).toBeGreaterThan(0);expect(vignetteOpacity()).toBeLessThan(1);
+ expect(vignetteOpacity()).toBe(0); // white opening edges throughout travel, normal-world material is separate
  expect(paint).not.toHaveBeenCalled(); // retain the real photograph until full-pane hold
  for(let i=0;i<35&&m.openingStates.at(-1)!.phase!=='commands';i++)runFrames(1,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
  expect(pane.geometry).toBe(geometry);expect(Array.from(geometry.getAttribute('uv').array)).toEqual(originalUv);
