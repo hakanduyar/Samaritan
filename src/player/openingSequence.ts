@@ -5,6 +5,7 @@ import {createSceneRig} from './sceneRig';
 import {disposeObjectTree} from './dispose';
 import {createOpeningClock,validateOpening} from './openingClock';
 import {assetPath} from '../contract/assetPath';
+import {revisionedAsset} from '../contract/assetRevision';
 
 export function openingAssetBase(origin:string){
  return new URL(assetPath('/assets/samaritan/opening/'),origin);
@@ -12,10 +13,11 @@ export function openingAssetBase(origin:string){
 
 export async function loadOpeningSequence(origin:string,signal:AbortSignal){
  const base=openingAssetBase(origin);
- const response=await fetch(new URL('opening-metadata.json',base),{signal});
+ const revision=process.env.NEXT_PUBLIC_OPENING_REVISION??'';
+ const response=await fetch(revisionedAsset(new URL('opening-metadata.json',base).href,revision),{signal,cache:'no-store'});
  if(!response.ok)throw Error('Opening metadata HTTP '+response.status);
  const meta=validateOpening(await response.json());
- const gltf=await new GLTFLoader().loadAsync(new URL('samaritan-opening.glb',base).href);
+ const gltf=await new GLTFLoader().loadAsync(revisionedAsset(new URL('samaritan-opening.glb',base).href,revision));
  if(signal.aborted){disposeObjectTree(gltf.scene);throw Error('Opening cancelled');}
  let cleanupRig:(()=>void)|undefined;
  let cleanupPane:(()=>void)|undefined;

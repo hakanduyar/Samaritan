@@ -1,4 +1,5 @@
 import {assetPath} from './assetPath';
+import {revisionedAsset} from './assetRevision';
 /**
  * Consumer-side reader for the producer scene manifest contract
  * (`public/assets/{world}/manifest.json`, schemaVersion 1).
@@ -45,7 +46,7 @@ export type ManifestValidation =
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 export function manifestPathFor(world: World): string {
-  return assetPath(`/assets/${world}/manifest.json`);
+  return revisionedAsset(assetPath(`/assets/${world}/manifest.json`));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -141,5 +142,5 @@ export function resolveSceneUrl(manifestUrl: string, sceneUrl: string): string {
   if (resolved.origin !== base.origin) {
     throw new Error(`sceneUrl resolves to a different origin (${resolved.origin})`);
   }
-  return resolved.href;
+  return revisionedAsset(resolved.href);
 }
