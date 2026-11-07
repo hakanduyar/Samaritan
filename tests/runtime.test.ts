@@ -114,10 +114,11 @@ interface Mounted {
   marker: HTMLElement;
   renderer: FakeRenderer;
   statuses: PlayerStatus[];
+  openingStates: Array<{phase:string;command:string}>;
   rendererCreated: () => boolean;
 }
 
-function mount(query: QueryRecord, world: "samaritan" | "machine" = "samaritan", interactionReady = true): Mounted {
+function mount(query: QueryRecord, world: "samaritan" | "machine" = "samaritan", interactionReady = true, openingSequence = false): Mounted {
   const host = document.createElement("main");
   Object.defineProperty(host, "clientWidth", { value: 1000, configurable: true });
   Object.defineProperty(host, "clientHeight", { value: 1000, configurable: true });
@@ -128,8 +129,9 @@ function mount(query: QueryRecord, world: "samaritan" | "machine" = "samaritan",
   const renderer = new FakeRenderer();
   let created = false;
   const statuses: PlayerStatus[] = [];
+  const openingStates:Array<{phase:string;command:string}>=[];
   const handle = createPlayer({
-    interactionReady,
+    interactionReady, openingSequence, onOpening:state=>openingStates.push(state),
     world,
     params: parsePlayerParams(query),
     host,
@@ -141,7 +143,7 @@ function mount(query: QueryRecord, world: "samaritan" | "machine" = "samaritan",
       return renderer;
     },
   });
-  return { handle, host, frame, marker, renderer, statuses, rendererCreated: () => created };
+  return { handle, host, frame, marker, renderer, statuses, openingStates, rendererCreated: () => created };
 }
 
 function wheel(host: HTMLElement, deltaY: number) {
@@ -551,4 +553,55 @@ it('maps admitted manual holds while playback and exact seeks retain authored ti
  wheel(m.host,1000);runFrames(300,16);
  expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
  expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
+});
+
+it('integrates real opening into one clock with early input/hidden guards and same-pose handoff',async()=>{
+ const paint=vi.fn();
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({fillRect(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},fillText:paint} as unknown as CanvasRenderingContext2D);
+ let decodeStarted=false,releaseDecode!:()=>void;const decodeGate=new Promise<void>(resolve=>{releaseDecode=resolve;});
+ const nativeFetch=globalThis.fetch;
+ const manifest=JSON.parse(readFileSync('public/assets/samaritan/manifest.json','utf8'));
+ const worldBytes=readFileSync('public/assets/samaritan/scene.glb');
+ const openingBytes=readFileSync('public/assets/samaritan/opening/samaritan-opening.glb');
+ const metadata=JSON.parse(readFileSync('public/assets/samaritan/opening/opening-metadata.json','utf8'));
+ vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
+ vi.stubGlobal('createImageBitmap',async()=>{decodeStarted=true;await decodeGate;return {width:1,height:1,close(){}};});
+ installEnvironment({'/assets/samaritan/manifest.json':()=>Response.json(manifest),'/assets/samaritan/scene.glb':()=>new Response(worldBytes),'/assets/samaritan/opening/opening-metadata.json':()=>Response.json(metadata),'/assets/samaritan/opening/samaritan-opening.glb':()=>new Response(openingBytes)});
+ const routedFetch=globalThis.fetch;vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
+ const m=track(mount({},'samaritan',false,true));
+ await until(()=>decodeStarted,'real image decode pending');runFrames(120,100);
+ expect(m.marker.dataset.state).not.toBe('ready');expect(m.openingStates).toHaveLength(0);
+ releaseDecode();await until(()=>m.marker.dataset.state==='ready','both real bundles ready');
+ const first=m.renderer.frames[0]!.position;
+ expect(m.openingStates.at(-1)!.phase).toBe('connection');
+ Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'));runFrames(1,30000);
+ Object.defineProperty(document,'hidden',{value:false,configurable:true});document.dispatchEvent(new Event('visibilitychange'));runFrames(1,100);
+ expect(m.openingStates.at(-1)!.phase).toBe('connection');
+ const vignette=m.renderer.scene!.getObjectByName('fx_vignette') as Mesh;
+ const vignetteOpacity=()=>Array.isArray(vignette.material)?NaN:vignette.material.opacity;
+ expect(vignetteOpacity()).toBe(1);
+ const pane=m.renderer.scene!.getObjectByName('screen_01') as Mesh;
+ const geometry=pane.geometry,originalUv=Array.from(geometry.getAttribute('uv').array),originalMaterial=pane.material;
+ wheel(m.host,3000);m.handle.controller.seek(20);m.handle.controller.setInteractionReady();
+ expect(m.handle.controller.getSnapshot()!.targetTime).toBe(0);
+ runFrames(45,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
+ expect(vignetteOpacity()).toBeGreaterThan(0);expect(vignetteOpacity()).toBeLessThan(1);
+ expect(paint).toHaveBeenCalledWith('WHAT',1024,588); // appears on approaching pane before fullscreen
+ runFrames(25,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
+ expect(pane.geometry).toBe(geometry);expect(Array.from(geometry.getAttribute('uv').array)).toEqual(originalUv);
+ expect(pane.material).not.toBe(originalMaterial);expect(paint).toHaveBeenCalledWith('WHAT',1024,588);
+ const commandMaterial=pane.material;
+ const focus=m.renderer.frames.at(-1)!.position;
+ Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'));
+ runFrames(1,30000);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(m.renderer.frames.at(-1)!.position).toEqual(focus);
+ Object.defineProperty(document,'hidden',{value:false,configurable:true});document.dispatchEvent(new Event('visibilitychange'));
+ runFrames(1,100);expect(m.renderer.frames.at(-1)!.position).toEqual(focus);
+ for(let i=0;i<40&&m.openingStates.at(-1)!.phase!=='return';i++)runFrames(1,100);
+ expect(m.openingStates.at(-1)!.phase).toBe('return');expect(pane.material).toBe(commandMaterial);expect(vignetteOpacity()).toBe(0);
+ runFrames(10,100);expect(vignetteOpacity()).toBeGreaterThan(0);expect(vignetteOpacity()).toBeLessThan(1);
+ runFrames(80,100);expect(m.openingStates.at(-1)!.phase).toBe('complete');
+ expect(m.openingStates.filter(x=>x.phase==='complete')).toHaveLength(1);
+ expect(m.renderer.frames.at(-1)!.position).toEqual(first);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(0);
+ wheel(m.host,100);runFrames(120,16);expect(m.handle.controller.getSnapshot()!.time).toBeGreaterThan(0);
 });
