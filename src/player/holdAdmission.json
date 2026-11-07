@@ -2,7 +2,7 @@
   "world": "samaritan",
   "sceneUrl": "./scene.glb",
   "clipName": "samaritan_interactive",
-  "durationSeconds": 80.64917,
+  "durationSeconds": 90.920601,
   "anchors": [
     {
       "screen": "screen_01",
@@ -13,32 +13,32 @@
     {
       "screen": "screen_02",
       "anchorNode": "anchor_screen_02",
-      "holdStart": 19.559999,
-      "holdEnd": 22.76
+      "holdStart": 22.593334,
+      "holdEnd": 25.793335
     },
     {
       "screen": "screen_03",
       "anchorNode": "anchor_screen_03",
-      "holdStart": 32.560001,
-      "holdEnd": 35.760002
+      "holdStart": 37.693336,
+      "holdEnd": 40.893337
     },
     {
       "screen": "screen_04",
       "anchorNode": "anchor_screen_04",
-      "holdStart": 46.120003,
-      "holdEnd": 49.320004
+      "holdStart": 52.953339,
+      "holdEnd": 56.153339
     },
     {
       "screen": "screen_05",
       "anchorNode": "anchor_screen_05",
-      "holdStart": 59.400005,
-      "holdEnd": 62.600006
+      "holdStart": 68.100006,
+      "holdEnd": 71.300003
     },
     {
       "screen": "focal_screen",
       "anchorNode": "anchor_focal_screen",
-      "holdStart": 73.249176,
-      "holdEnd": 76.449173
+      "holdStart": 83.520607,
+      "holdEnd": 86.720604
     }
   ]
 }
