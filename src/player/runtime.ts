@@ -21,9 +21,12 @@ import {
 import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SECONDS } from "./navigation";
 import { createAmbientRails } from "./ambient";
 
+import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
+
 export const MAX_PIXEL_RATIO = 1.5;
 const MAX_FRAME_DELTA_SECONDS = 0.1;
-const TOUCH_PIXELS_PER_CLIP = 24000;
+const MANUAL_PIXELS_PER_ROUTE = 16000;
+const REFERENCE_PIXELS_PER_ROUTE = 24000;
 
 export interface RendererLike {
   domElement: HTMLCanvasElement;
@@ -115,6 +118,9 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let currentTime = 0;
   let targetTime = 0;
   let navigationVelocity = 0;
+  // Explicit endpoint travel crosses intermediate photo holds; fresh input cancels it.
+  let endpointTravel = false;
+  let manualMap = createHoldMap(1, []);
   const heldKeys = new Map<string, number>();
   let heldSeconds = 0;
   let playing = false;
@@ -204,7 +210,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       heldSeconds += dt;
       if (heldSeconds >= HOLD_DELAY_SECONDS) {
         const direction = Math.sign([...heldKeys.values()].reduce((a, b) => a + b, 0));
-        targetTime = clampTime(currentTime + direction * MAX_PENDING_SECONDS, rig.duration);
+        targetTime = manualMap.toClip(manualMap.toNavigation(currentTime) + direction * MAX_PENDING_SECONDS);
       }
     }
     if (playing) {
@@ -214,11 +220,16 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     } else if (currentTime !== targetTime || navigationVelocity !== 0) {
       if (exact) { currentTime = targetTime; navigationVelocity = 0; }
       else {
-        const next = advanceNavigation(currentTime, targetTime, navigationVelocity, dt);
-        currentTime = clampTime(next.current, rig.duration);
-        navigationVelocity = currentTime === next.current ? next.velocity : 0;
+        const navTarget = manualMap.toNavigation(targetTime);
+        const next = advanceNavigation(manualMap.toNavigation(currentTime), navTarget, navigationVelocity, dt);
+        const navCurrent = clampTime(next.current, manualMap.duration);
+        currentTime = navCurrent === navTarget ? targetTime : manualMap.toClip(navCurrent);
+        navigationVelocity = navCurrent === next.current ? next.velocity : 0;
+        const focus = heldKeys.size || endpointTravel ? null : focusEntry(before, currentTime, manualMap.focusHolds);
+        if (focus !== null) { currentTime = focus; targetTime = focus; navigationVelocity = 0; }
       }
     }
+    if (currentTime === targetTime && navigationVelocity === 0) endpointTravel = false;
     let ambientFrame = false;
     if (ambientRunning()) {
       ambient!.advance(elapsed);
@@ -238,8 +249,9 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     schedule();
   };
 
-  const setTarget = (seconds: number, immediate: boolean) => {
+  const setTarget = (seconds: number, immediate: boolean, endpoint = false) => {
     if (!rig) return;
+    endpointTravel = endpoint && !immediate;
     targetTime = clampTime(seconds, rig.duration);
     if (immediate) { currentTime = targetTime; navigationVelocity = 0; }
     publish();
@@ -249,11 +261,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const applyManualDelta = (delta: number) => {
     if (!rig) return;
     playing = false;
-    setTarget(exact ? targetTime + delta : navigationTarget(currentTime, targetTime, delta), exact);
+    setTarget(exact ? targetTime + delta : manualMap.toClip(navigationTarget(manualMap.toNavigation(currentTime), manualMap.toNavigation(targetTime), delta)), exact);
   };
 
   const togglePlay = () => {
     if (!rig) return;
+    endpointTravel = false;
     heldKeys.clear(); heldSeconds = 0;
     if (playing) {
       playing = false;
@@ -296,7 +309,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       ambient?.reset(); ambientRenderElapsed = 0;
       if (reducedMotion) {
         playing = false; heldKeys.clear(); heldSeconds = 0;
-        navigationVelocity = 0; targetTime = currentTime; resetTouch();
+        navigationVelocity = 0; targetTime = currentTime; endpointTravel = false; resetTouch();
       }
       lastFrameMs = null;
       requestRender();
@@ -305,7 +318,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       if (doc.hidden) {
         heldKeys.clear(); heldSeconds = 0;
         resetTouch();
-        navigationVelocity = 0; targetTime = currentTime;
+        navigationVelocity = 0; targetTime = currentTime; endpointTravel = false;
         if (rafId !== 0) win.cancelAnimationFrame(rafId);
         rafId = 0;
         lastFrameMs = null;
@@ -333,7 +346,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         wheel.preventDefault();
         if (!interactionReady || doc.hidden) return;
         playing = false;
-        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, rig.duration);
+        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.duration, exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE);
         applyManualDelta(delta);
       },
       { passive: false },
@@ -354,7 +367,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         return;
       }
       playing = false;
-      if (command.type === "jump") setTarget(command.to === "start" ? 0 : rig.duration, exact);
+      if (command.type === "jump") {
+        heldKeys.clear(); heldSeconds = 0; resetTouch();
+        setTarget(command.to === "start" ? 0 : rig.duration, exact, true);
+      }
       else {
         if (!exact) { heldKeys.set(key.key, Math.sign(command.seconds)); heldSeconds = 0; }
         applyManualDelta(command.seconds);
@@ -362,12 +378,15 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     });
     listen(win, "keyup", (event) => {
       heldKeys.delete((event as KeyboardEvent).key);
-      if (!heldKeys.size) heldSeconds = 0;
+      if (!heldKeys.size) {
+        heldSeconds = 0;
+        if (!exact && !endpointTravel && withinFocus(currentTime, manualMap.focusHolds)) { targetTime = currentTime; navigationVelocity = 0; requestRender(); }
+      }
     });
     listen(win, "blur", () => {
       heldKeys.clear(); heldSeconds = 0;
       resetTouch();
-      navigationVelocity = 0; targetTime = currentTime;
+      navigationVelocity = 0; targetTime = currentTime; endpointTravel = false;
       requestRender();
     });
 
@@ -388,9 +407,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       const dy = touchY - pointer.clientY;
       touchY = pointer.clientY;
       playing = false;
-      applyManualDelta((dy / TOUCH_PIXELS_PER_CLIP) * rig.duration);
+      applyManualDelta((dy / (exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE)) * manualMap.duration);
     });
     const endTouch = () => {
+      if (!exact && !endpointTravel && withinFocus(currentTime, manualMap.focusHolds)) { targetTime = currentTime; navigationVelocity = 0; requestRender(); }
       touchY = null;
       touchId = null;
     };
@@ -459,6 +479,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       return;
     }
     manifest = validation.manifest;
+    manualMap = navigationMap(manifest, exact);
     marker.dataset.stage = "scene-assets";
     if (params.requestedTime !== null && params.requestedTime > manifest.durationSeconds) {
       fail(

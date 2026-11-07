@@ -264,15 +264,15 @@ describe("interactive mode", () => {
     expect(m.marker.dataset.time).toBe("0.000000");
     const start = m.renderer.frames.at(-1);
 
-    wheel(m.host, 3000);
+    wheel(m.host, 2000);
     await until(() => m.marker.dataset.settled === "true", "first half step");
-    wheel(m.host, 3000);
+    wheel(m.host, 2000);
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "1.000000", "settle at 1");
     expect(m.renderer.frames.at(-1)).toEqual({ camera: "route_camera", position: [0, 1, 8] });
 
-    wheel(m.host, -3000);
+    wheel(m.host, -2000);
     await until(() => m.marker.dataset.settled === "true", "first reverse step");
-    wheel(m.host, -3000);
+    wheel(m.host, -2000);
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "0.000000", "settle at 0");
     expect(m.renderer.frames.at(-1)).toEqual(start);
     expect(rafQueue.size).toBe(0); // settled: no further frame work
@@ -478,4 +478,77 @@ it('integrates actual selected rails with intro release, hidden pause, reverse s
  reducedMotion=false;mediaQuery.dispatchEvent(new Event('change'));runFrames(1,16);
  expect(selected.position.y).toBe(base);runFrames(120,16);expect(selected.position.y).not.toBe(base);
  expect(m.handle.controller.getSnapshot()?.time).toBe(0);
+});
+
+it('maps admitted manual holds while playback and exact seeks retain authored time',async()=>{
+ const world='samaritan';
+ const nativeFetch=globalThis.fetch;
+ const manifest=JSON.parse(readFileSync('public/assets/'+world+'/manifest.json','utf8'));
+ const scenePath='/assets/'+world+'/'+manifest.sceneUrl.replace(/^\.\//,'');
+ const bytes=readFileSync('public'+scenePath);
+ vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
+ vi.stubGlobal('createImageBitmap',async()=>({width:1,height:1,close(){}}));
+ installEnvironment({['/assets/'+world+'/manifest.json']:()=>Response.json(manifest),[scenePath]:()=>new Response(bytes)});
+ const routedFetch=globalThis.fetch;
+ vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
+ const m=track(mount({},world));
+ await until(()=>m.marker.dataset.state==='ready','actual admitted route ready');
+ const hold=manifest.anchors[0],mid=(hold.holdStart+hold.holdEnd)/2;
+ m.handle.controller.seek(mid);runFrames(1,0);
+ const position=m.renderer.frames.at(-1)!.position;
+ m.handle.controller.togglePlay();runFrames(2,100);
+ const afterPlayback=m.handle.controller.getSnapshot()!.time;
+ expect(afterPlayback).toBeGreaterThan(mid);expect(afterPlayback-mid).toBeLessThanOrEqual(.201);
+ expect(m.renderer.frames.at(-1)!.position).toEqual(position);
+ wheel(m.host,100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.playing).toBe(false);
+ const forward=m.handle.controller.getSnapshot()!.time;
+ expect(forward).toBeGreaterThan(hold.holdEnd); // 100px crosses, old ~800px hold cannot
+ wheel(m.host,-100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(hold.holdEnd,5); // reverse entry consumes old backlog
+ runFrames(120,16);expect(m.handle.controller.getSnapshot()!.time).toBeCloseTo(hold.holdEnd,5);
+ wheel(m.host,-10);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeLessThan(hold.holdEnd);
+ expect(m.handle.controller.getSnapshot()!.time).toBeGreaterThan(hold.holdStart);
+ expect(m.renderer.frames.at(-1)!.position).toEqual(position);
+ m.handle.controller.seek(mid);runFrames(1,0);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(mid);
+ m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);
+ wheel(m.host,1000);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
+ runFrames(120,16);expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ wheel(m.host,100);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBeGreaterThan(hold.holdEnd);
+ // Releasing held input inside a photo cancels pending travel immediately.
+ m.handle.controller.seek(mid);runFrames(1,0);
+ window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));runFrames(2,16);
+ window.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight'}));
+ const released=m.handle.controller.getSnapshot()!.time;runFrames(120,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(released);
+ expect(released).toBeGreaterThanOrEqual(hold.holdStart);expect(released).toBeLessThan(hold.holdEnd);
+ // Continuous held input deliberately traverses; OS repeat frequency adds nothing.
+ const heldTravel=(repeat:boolean)=>{
+   m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);
+   window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));
+   for(let i=0;i<90;i++){if(repeat)window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',repeat:true}));runFrames(1,16);}
+   const result=m.handle.controller.getSnapshot()!.time;
+   window.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowRight'}));return result;
+ };
+ const held=heldTravel(false);expect(held).toBeGreaterThan(hold.holdEnd);
+ expect(heldTravel(true)).toBeCloseTo(held,8);
+
+ // Home/End traverse all admitted holds smoothly, including key release inside a hold.
+ m.handle.controller.seek(mid);runFrames(1,0);
+ key('End');window.dispatchEvent(new KeyboardEvent('keyup',{key:'End'}));
+ runFrames(3,16);expect(m.handle.controller.getSnapshot()!.time).toBeLessThan(manifest.durationSeconds);
+ runFrames(900,100);expect(m.handle.controller.getSnapshot()!.time).toBe(m.handle.controller.getSnapshot()!.duration);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
+ key('Home');window.dispatchEvent(new KeyboardEvent('keyup',{key:'Home'}));
+ runFrames(900,100);expect(m.handle.controller.getSnapshot()!.time).toBe(0);
+ // Fresh wheel intent interrupts endpoint travel and restores the ordinary photo guard.
+ m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);key('End');
+ wheel(m.host,1000);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
 });

@@ -2,3 +2,8 @@ allowBuilds:
   sharp: false
 minimumReleaseAgeExclude:
   - jsdom@30.0.0
+overrides:
+  # Security fixes within the parents' declared ranges; remove as upstream resolves them.
+  "jsdom@30.0.0>undici": 8.12.2
+  "vitest@4.1.12>vite": 8.1.6
+  "css-tree@3.2.1>source-map-js": 1.2.2
