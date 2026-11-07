@@ -77,7 +77,7 @@ export interface PlayerOptions {
   createRenderer?: () => RendererLike;
   maxPixelRatio?: number;
   interactionReady?: boolean;
-  openingSequence?: boolean;
+  openingSequence?: boolean | 'straight';
   onOpening?(state:{phase:OpeningPhase;command:string}):void;
 }
 
@@ -192,8 +192,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const renderNow = () => {
     if (!rig || !renderer || !scene) return;
     const state=opening?.clock.snapshot();
+    if(state){marker.dataset.openingPhase=state.phase;marker.dataset.openingTime=formatTime(state.clipTime);}
     if(opening && state && state.phase!=='complete'){
-      opening.prepare();opening.rig.seek(state.clipTime);renderer.render(opening.scene,opening.rig.camera);
+      // Keep the opaque command frame during the straight variant's masked return.
+      if(!opening.maskedReturn||state.phase!=='return'){
+        opening.prepare();opening.rig.seek(state.clipTime);renderer.render(opening.scene,opening.rig.camera);
+      }
     }else{currentTime=rig.seek(currentTime);ambient?.apply();renderer.render(scene,rig.camera);}
     if(state && openingLabel!==state.phase+state.command){openingLabel=state.phase+state.command;options.onOpening?.({phase:state.phase,command:state.command});}
     needsRender = false;
@@ -223,6 +227,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         handedOff=true;currentTime=targetTime=0;navigationVelocity=0;
         heldKeys.clear();heldSeconds=0;resetTouch();ambient?.reset();
         interactionReady=true;
+        if(options.openingSequence==='straight')layout();
       }
     }
     if (!exact && heldKeys.size > 0 && interactionReady) {
@@ -303,11 +308,19 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   const layout = () => {
     if (!renderer || !manifest) return;
-    const rect = letterbox(host.clientWidth, host.clientHeight, manifest.sourceAspectRatio);
+    const straightVisible=options.openingSequence==='straight'&&opening?.clock.snapshot().phase!=='complete';
+    const frozenReturn=straightVisible&&opening?.clock.snapshot().phase==='return';
+    const width=Math.max(host.clientWidth,host.clientHeight*manifest.sourceAspectRatio);
+    const height=width/manifest.sourceAspectRatio;
+    const rect = straightVisible
+      ? {x:(host.clientWidth-width)/2,y:(host.clientHeight-height)/2,width,height}
+      : letterbox(host.clientWidth, host.clientHeight, manifest.sourceAspectRatio);
     frame.style.left = `${rect.x}px`;
     frame.style.top = `${rect.y}px`;
     frame.style.width = `${rect.width}px`;
     frame.style.height = `${rect.height}px`;
+    // CSS cover-fit can resize the frozen command without clearing its buffer.
+    if(frozenReturn)return;
     renderer.setPixelRatio(Math.min(win.devicePixelRatio || 1, maxPixelRatio));
     renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
     requestRender();
@@ -568,7 +581,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
     if(openingEnabled){
       marker.dataset.stage='opening-assets';
-      opening=await loadOpeningSequence(win.location.href,abort.signal);
+      opening=await loadOpeningSequence(win.location.href,abort.signal,options.openingSequence==='straight');
       if(disposed){opening.dispose();opening=null;return;}
     }
 

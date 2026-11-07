@@ -5,14 +5,14 @@ import {parsePlayerParams} from './time';
 import type {OpeningPhase} from './openingClock';
 
 /** Isolated candidate: old startup and the approved route remain available separately. */
-export function OpeningWorldPlayer(){
+export function OpeningWorldPlayer({straight=false}:{straight?:boolean}){
  const host=useRef<HTMLDivElement>(null),frame=useRef<HTMLDivElement>(null),marker=useRef<HTMLDivElement>(null);
  const [status,setStatus]=useState<PlayerStatus>({state:'loading'});
  const [opening,setOpening]=useState<{phase:OpeningPhase;command:string}>({phase:'connection',command:''});
  useEffect(()=>{
-  const handle=createPlayer({world:'samaritan',params:parsePlayerParams({}),host:host.current!,frame:frame.current!,marker:marker.current!,onStatus:setStatus,openingSequence:true,onOpening:setOpening});
+  const handle=createPlayer({world:'samaritan',params:parsePlayerParams({}),host:host.current!,frame:frame.current!,marker:marker.current!,onStatus:setStatus,openingSequence:straight?'straight':true,onOpening:setOpening});
   return()=>handle.dispose();
- },[]);
+ },[straight]);
  const loading=status.state==='loading',connection=status.state==='ready'&&opening.phase==='connection';
  return <main className="ref-player" ref={host} aria-label="Samaritan opening lifecycle candidate" style={{background:'#f7f7f6'}}>
   <div hidden ref={marker} data-reference-marker=""/><div ref={frame} className="ref-frame"/>

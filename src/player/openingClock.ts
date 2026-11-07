@@ -1,10 +1,11 @@
 export type OpeningPhase='connection'|'world'|'commands'|'return'|'complete';
-export interface OpeningContract {durationSeconds:number;paneNode:string;openingClipName:string;openingCameraName:string;phases:{approach:{start:number;end:number};paneHold:{start:number;end:number};return:{start:number;end:number}};handoff:{interactiveTimeSeconds:number}}
-export function validateOpening(value:unknown):OpeningContract {
+export interface OpeningContract {durationSeconds:number;paneNode:string;openingClipName:string;openingCameraName:string;commandOpaqueMask?:{start:number;end:number};phases:{approach:{start:number;end:number};paneHold:{start:number;end:number};return:{start:number;end:number;hidden?:boolean}};handoff:{interactiveTimeSeconds:number}}
+export function validateOpening(value:unknown,straight=false):OpeningContract {
  const m=value as OpeningContract;
- if(!m||m.openingClipName!=='samaritan_opening'||m.openingCameraName!=='route_camera_lens'||m.paneNode!=='screen_01'||m.handoff?.interactiveTimeSeconds!==0)throw Error('Unadmitted opening identity');
+ if(!m||m.openingClipName!=='samaritan_opening'||m.openingCameraName!=='route_camera_lens'||m.paneNode!==(straight?'focal_screen':'screen_01')||m.handoff?.interactiveTimeSeconds!==0)throw Error('Unadmitted opening identity');
  const end=m.phases?.approach?.end,start=m.phases?.paneHold?.start,holdEnd=m.phases?.paneHold?.end,returnStart=m.phases?.return?.start,duration=m.durationSeconds;
  if(![m.phases?.approach?.start,end,start,holdEnd,returnStart,duration,m.phases?.return?.end].every(Number.isFinite)||end!==start||holdEnd!==returnStart||!(m.phases.approach.start>=0&&start>m.phases.approach.start&&holdEnd>start&&duration>holdEnd)||m.phases.return.end!==duration)throw Error('Invalid opening phase contract');
+ if(straight&&(!m.commandOpaqueMask||m.phases.return.hidden!==true||!Number.isFinite(m.commandOpaqueMask.start)||m.commandOpaqueMask.start<start||m.commandOpaqueMask.start>returnStart||m.commandOpaqueMask.end!==duration))throw Error('Opening requires an opaque masked handoff');
  return m;
 }
 /** One foreground clock; discarded phase overshoot guarantees commands get a presented dwell. */
