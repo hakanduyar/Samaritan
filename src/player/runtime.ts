@@ -23,6 +23,9 @@ import { createAmbientRails } from "./ambient";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
 
+import { loadOpeningSequence } from './openingSequence';
+import type { OpeningPhase } from './openingClock';
+
 export const MAX_PIXEL_RATIO = 1.5;
 const MAX_FRAME_DELTA_SECONDS = 0.1;
 const MANUAL_PIXELS_PER_ROUTE = 16000;
@@ -74,6 +77,8 @@ export interface PlayerOptions {
   createRenderer?: () => RendererLike;
   maxPixelRatio?: number;
   interactionReady?: boolean;
+  openingSequence?: boolean;
+  onOpening?(state:{phase:OpeningPhase;command:string}):void;
 }
 
 export interface PlayerHandle {
@@ -103,6 +108,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const win = host.ownerDocument.defaultView ?? window;
   const doc = host.ownerDocument;
   const maxPixelRatio = options.maxPixelRatio ?? MAX_PIXEL_RATIO;
+  const openingEnabled = options.openingSequence && world === "samaritan" && params.mode === "interactive";
 
   const abort = new AbortController();
   const cleanups: Array<() => void> = [];
@@ -115,6 +121,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let renderer: RendererLike | null = null;
   let manifest: SceneManifest | null = null;
 
+  let opening: Awaited<ReturnType<typeof loadOpeningSequence>> | null = null;
+  let openingLabel = "";
   let currentTime = 0;
   let targetTime = 0;
   let navigationVelocity = 0;
@@ -130,7 +138,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let ready = false;
   let ambient: ReturnType<typeof createAmbientRails> | null = null;
   let ambientRenderElapsed = 0;
-  let interactionReady = options.interactionReady ?? true;
+  let interactionReady = openingEnabled ? false : options.interactionReady ?? true;
   let autoplayStarted = false;
   let resetTouch = () => {};
   const startDeferredAutoplay = () => {
@@ -183,15 +191,17 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   const renderNow = () => {
     if (!rig || !renderer || !scene) return;
-    currentTime = rig.seek(currentTime);
-    ambient?.apply();
-    renderer.render(scene, rig.camera);
+    const state=opening?.clock.snapshot();
+    if(opening && state && state.phase!=='complete'){
+      opening.prepare();opening.rig.seek(state.clipTime);renderer.render(opening.scene,opening.rig.camera);
+    }else{currentTime=rig.seek(currentTime);ambient?.apply();renderer.render(scene,rig.camera);}
+    if(state && openingLabel!==state.phase+state.command){openingLabel=state.phase+state.command;options.onOpening?.({phase:state.phase,command:state.command});}
     needsRender = false;
     publish();
   };
 
   const ambientRunning = () => ready && interactionReady && !reducedMotion && Boolean(ambient?.selection.length);
-  const isAnimating = () => playing || currentTime !== targetTime || navigationVelocity !== 0 || heldKeys.size > 0 || ambientRunning();
+  const isAnimating = () => (ready && opening !== null && opening.clock.snapshot().phase !== 'complete') || playing || currentTime !== targetTime || navigationVelocity !== 0 || heldKeys.size > 0 || ambientRunning();
 
   const schedule = () => {
     if (disposed || rafId !== 0 || doc.hidden) return;
@@ -206,6 +216,15 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     const dt = Math.min(elapsed, MAX_FRAME_DELTA_SECONDS);
     lastFrameMs = nowMs;
     const before = currentTime;
+    let handedOff=false;
+    if(ready && opening && opening.clock.snapshot().phase!=='complete'){
+      const state=opening.clock.advance(elapsed,reducedMotion);needsRender=true;
+      if(state.phase==='complete'){
+        handedOff=true;currentTime=targetTime=0;navigationVelocity=0;
+        heldKeys.clear();heldSeconds=0;resetTouch();ambient?.reset();
+        interactionReady=true;
+      }
+    }
     if (!exact && heldKeys.size > 0 && interactionReady) {
       heldSeconds += dt;
       if (heldSeconds >= HOLD_DELAY_SECONDS) {
@@ -232,7 +251,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (currentTime === targetTime && navigationVelocity === 0) endpointTravel = false;
     let ambientFrame = false;
     if (ambientRunning()) {
-      ambient!.advance(elapsed);
+      ambient!.advance(handedOff ? 0 : elapsed);
       ambientRenderElapsed += elapsed;
       ambientFrame = ambientRenderElapsed >= 1 / 30;
     }
@@ -240,6 +259,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       renderNow();
       ambientRenderElapsed = 0;
     }
+    if(handedOff) startDeferredAutoplay();
     if (isAnimating()) schedule();
     else lastFrameMs = null;
   }
@@ -422,6 +442,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (rafId !== 0) win.cancelAnimationFrame(rafId);
     rafId = 0;
     while (cleanups.length > 0) cleanups.pop()?.();
+    opening?.dispose();opening=null;
     rig?.dispose();
     rig = null;
     ambient?.reset(); ambient = null;
@@ -545,6 +566,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       return;
     }
 
+    if(openingEnabled){
+      marker.dataset.stage='opening-assets';
+      opening=await loadOpeningSequence(win.location.href,abort.signal);
+      if(disposed){opening.dispose();opening=null;return;}
+    }
+
     try {
       renderer = (options.createRenderer ?? defaultRenderer)();
     } catch (error) {
@@ -583,6 +610,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       setStatus({ state: "ready", manifest });
       publish();
       startDeferredAutoplay();
+      if(opening) requestRender();
     });
   };
 
@@ -595,7 +623,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   return {
     controller: {
       setInteractionReady() {
-        if (disposed || interactionReady) return;
+        if (disposed || interactionReady || (opening && opening.clock.snapshot().phase!=='complete')) return;
         resetTouch();
         interactionReady = true;
         startDeferredAutoplay();
