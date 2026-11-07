@@ -283,15 +283,15 @@ describe("interactive mode", () => {
     expect(m.marker.dataset.time).toBe("0.000000");
     const start = m.renderer.frames.at(-1);
 
-    wheel(m.host, 2000);
+    wheel(m.host, 1750); // 1750 / 14000 of the 4 s clip
     await until(() => m.marker.dataset.settled === "true", "first half step");
-    wheel(m.host, 2000);
+    wheel(m.host, 1750); // 1750 / 14000 of the 4 s clip
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "1.000000", "settle at 1");
     expect(m.renderer.frames.at(-1)).toEqual({ camera: "route_camera", position: [0, 1, 8] });
 
-    wheel(m.host, -2000);
+    wheel(m.host, -1750);
     await until(() => m.marker.dataset.settled === "true", "first reverse step");
-    wheel(m.host, -2000);
+    wheel(m.host, -1750);
     await until(() => m.marker.dataset.settled === "true" && m.marker.dataset.time === "0.000000", "settle at 0");
     expect(m.renderer.frames.at(-1)).toEqual(start);
     expect(rafQueue.size).toBe(0); // settled: no further frame work
