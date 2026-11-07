@@ -1,3 +1,4 @@
+import {assetPath} from './assetPath';
 /**
  * Consumer-side reader for the producer scene manifest contract
  * (`public/assets/{world}/manifest.json`, schemaVersion 1).
@@ -44,7 +45,7 @@ export type ManifestValidation =
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 export function manifestPathFor(world: World): string {
-  return `/assets/${world}/manifest.json`;
+  return assetPath(`/assets/${world}/manifest.json`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
