@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "timeBasis": "authored",
+  "openingClipName": "samaritan_opening",
+  "openingCameraName": "route_camera_lens",
+  "durationSeconds": 15,
+  "paneNode": "focal_screen",
+  "phases": {
+    "worldTravel": {
+      "start": 0,
+      "end": 9,
+      "durationSeconds": 9
+    },
+    "approach": {
+      "start": 9,
+      "end": 12.5,
+      "durationSeconds": 3.5
+    },
+    "paneHold": {
+      "start": 12.5,
+      "end": 14.5,
+      "durationSeconds": 2
+    },
+    "return": {
+      "start": 14.5,
+      "end": 15,
+      "durationSeconds": 0.5,
+      "hidden": true
+    }
+  },
+  "handoff": {
+    "interactiveTimeSeconds": 0
+  },
+  "commandOpaqueMask": {
+    "start": 14.25,
+    "end": 15
+  }
+}
