@@ -1,5 +1,5 @@
 /** Bounds user-controlled clip traversal, not the imported camera or clip. */
-export const MAX_NAVIGATION_RATE = 1.25;
+export const MAX_NAVIGATION_RATE = 1.4;
 export const MAX_NAVIGATION_ACCELERATION = 2.5;
 export const MAX_PENDING_SECONDS = 0.6;
 export const HOLD_DELAY_SECONDS = 0.2;

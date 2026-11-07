@@ -28,7 +28,7 @@ import type { OpeningPhase } from './openingClock';
 
 export const MAX_PIXEL_RATIO = 1.5;
 const MAX_FRAME_DELTA_SECONDS = 0.1;
-const MANUAL_PIXELS_PER_ROUTE = 16000;
+const MANUAL_PIXELS_PER_ROUTE = 14000;
 const REFERENCE_PIXELS_PER_ROUTE = 24000;
 
 export interface RendererLike {
