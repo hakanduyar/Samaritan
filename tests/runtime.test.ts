@@ -537,4 +537,18 @@ it('maps admitted manual holds while playback and exact seeks retain authored ti
  };
  const held=heldTravel(false);expect(held).toBeGreaterThan(hold.holdEnd);
  expect(heldTravel(true)).toBeCloseTo(held,8);
+
+ // Home/End traverse all admitted holds smoothly, including key release inside a hold.
+ m.handle.controller.seek(mid);runFrames(1,0);
+ key('End');window.dispatchEvent(new KeyboardEvent('keyup',{key:'End'}));
+ runFrames(3,16);expect(m.handle.controller.getSnapshot()!.time).toBeLessThan(manifest.durationSeconds);
+ runFrames(900,100);expect(m.handle.controller.getSnapshot()!.time).toBe(m.handle.controller.getSnapshot()!.duration);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
+ key('Home');window.dispatchEvent(new KeyboardEvent('keyup',{key:'Home'}));
+ runFrames(900,100);expect(m.handle.controller.getSnapshot()!.time).toBe(0);
+ // Fresh wheel intent interrupts endpoint travel and restores the ordinary photo guard.
+ m.handle.controller.seek(hold.holdStart-.05);runFrames(1,0);key('End');
+ wheel(m.host,1000);runFrames(300,16);
+ expect(m.handle.controller.getSnapshot()!.time).toBe(hold.holdStart);
+ expect(m.handle.controller.getSnapshot()!.settled).toBe(true);
 });
