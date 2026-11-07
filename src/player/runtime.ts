@@ -537,9 +537,26 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     manager.onError = (url) => failedResources.push(url);
     let gltf: Awaited<ReturnType<GLTFLoader["loadAsync"]>>;
     try {
-      gltf = await new GLTFLoader(manager).loadAsync(sceneUrl);
+      // The two independent bundles may download/decode together. Each owns
+      // late completion cleanup if its peer fails or the player is disposed.
+      const worldLoad = new GLTFLoader(manager).loadAsync(sceneUrl).then((value) => {
+        if (disposed || terminal) disposeObjectTree(value.scene);
+        else scene = value.scene;
+        return value;
+      });
+      const openingLoad = openingEnabled
+        ? loadOpeningSequence(win.location.href, abort.signal, options.openingSequence === 'straight').then((value) => {
+          if (disposed || terminal) value.dispose();
+          else opening = value;
+        })
+        : Promise.resolve();
+      [gltf] = await Promise.all([worldLoad, openingLoad]);
     } catch (error) {
       if (disposed) return;
+      if (openingEnabled) {
+        fail("error", "Startup assets failed to load", describe(error));
+        return;
+      }
       if (httpStatusOf(error) === 404) {
         fail("missing", "Scene file not present", `${manifest.sceneUrl} was not found (404).`);
       } else {
@@ -547,10 +564,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       }
       return;
     }
-    if (disposed) {
-      disposeObjectTree(gltf.scene);
-      return;
-    }
+    if (disposed || terminal) return;
     scene = gltf.scene;
     if (manifest.anchors?.some((anchor) => !scene!.getObjectByName(anchor.screen) || !scene!.getObjectByName(anchor.anchorNode))) {
       fail("error", "Scene violates contract", "An authored screen or anchor is absent from the imported world");
@@ -577,12 +591,6 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     } catch (error) {
       fail("error", "Scene violates contract", describe(error));
       return;
-    }
-
-    if(openingEnabled){
-      marker.dataset.stage='opening-assets';
-      opening=await loadOpeningSequence(win.location.href,abort.signal,options.openingSequence==='straight');
-      if(disposed){opening.dispose();opening=null;return;}
     }
 
     try {
