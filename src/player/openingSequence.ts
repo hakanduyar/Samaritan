@@ -2,6 +2,7 @@ import {createOpeningVignette,openingVignetteOpacity} from './openingVignette';
 import {createOpeningPane} from './openingPane';
 import {createStraightOpeningPane} from './straightOpeningPane';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {LoadingManager} from 'three';
 import {createSceneRig} from './sceneRig';
 import {disposeObjectTree} from './dispose';
 import {createOpeningClock,validateOpening} from './openingClock';
@@ -12,13 +13,21 @@ export function openingAssetBase(origin:string,straight=false){
  return new URL(assetPath(straight?'/assets/samaritan/opening-straight/':'/assets/samaritan/opening/'),origin);
 }
 
-export async function loadOpeningSequence(origin:string,signal:AbortSignal,straight=false){
+export async function loadOpeningSequence(origin:string,signal:AbortSignal,straight=false,onProgress=()=>{}){
  const base=openingAssetBase(origin,straight);
  const revision=(straight?process.env.NEXT_PUBLIC_STRAIGHT_OPENING_REVISION:process.env.NEXT_PUBLIC_OPENING_REVISION)??'';
  const response=await fetch(revisionedAsset(new URL('opening-metadata.json',base).href,revision),{signal,cache:'no-store'});
  if(!response.ok)throw Error('Opening metadata HTTP '+response.status);
  const meta=validateOpening(await response.json(),straight);
- const gltf=await new GLTFLoader().loadAsync(revisionedAsset(new URL('samaritan-opening.glb',base).href,revision));
+ if(signal.aborted)throw Error('Opening cancelled');
+ onProgress();
+ const manager=new LoadingManager();
+ const cancel=()=>manager.abort();
+ signal.addEventListener('abort',cancel,{once:true});
+ let bytes=0;
+ const gltf=await new GLTFLoader(manager).loadAsync(revisionedAsset(new URL('samaritan-opening.glb',base).href,revision),(event)=>{
+  if(event.loaded>bytes){bytes=event.loaded;onProgress();}
+ }).finally(()=>signal.removeEventListener('abort',cancel));
  if(signal.aborted){disposeObjectTree(gltf.scene);throw Error('Opening cancelled');}
  let cleanupRig:(()=>void)|undefined;
  let cleanupPane:(()=>void)|undefined;

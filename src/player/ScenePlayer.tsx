@@ -72,6 +72,7 @@ export function ScenePlayer({ world, query }: ScenePlayerProps) {
                 {label}: {status.message}
               </p>
               <p className="ref-status-detail">{status.detail}</p>
+              <button type="button" onClick={() => window.location.reload()}>Retry</button>
             </div>
           )}
         </div>

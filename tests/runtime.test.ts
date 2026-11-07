@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { URL as NodeURL } from "node:url";
 import { Blob as NodeBlob } from "node:buffer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { createPlayer, type PlayerHandle, type PlayerStatus, type RendererLike } from "../src/player/runtime";
 import { parsePlayerParams, type QueryRecord } from "../src/player/time";
@@ -191,6 +192,71 @@ afterEach(() => {
     m.host.remove();
   }
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+function captureStartupDeadline() {
+  const timers = new Map<number, () => void>();
+  let id = 100000;
+  const originalSet = window.setTimeout.bind(window), originalClear = window.clearTimeout.bind(window);
+  vi.spyOn(window, 'setTimeout').mockImplementation(((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+    if (delay === 45000) { timers.set(++id, callback as () => void); return id; }
+    return originalSet(callback, delay, ...args);
+  }) as typeof window.setTimeout);
+  vi.spyOn(window, 'clearTimeout').mockImplementation((key) => { if(typeof key==='number')timers.delete(key); originalClear(key); });
+  return {timers, expire(){const batch=[...timers.values()];timers.clear();batch.forEach(fn=>fn());}};
+}
+
+it('times out a stalled manifest and rejects its late completion without creating a renderer', async () => {
+  installEnvironment(sceneRoutes('samaritan'));
+  const deadline=captureStartupDeadline();
+  let release!:(response:Response)=>void;
+  vi.stubGlobal('fetch',vi.fn(()=>new Promise<Response>(resolve=>{release=resolve;})));
+  const m=track(mount({}));
+  deadline.expire();
+  expect(m.statuses.at(-1)).toMatchObject({state:'error',message:'Scene download stalled'});
+  release(Response.json(fixtureManifest('samaritan')));
+  await Promise.resolve();await Promise.resolve();runFrames();
+  expect(m.marker.dataset.state).toBe('error');
+  expect(m.rendererCreated()).toBe(false);
+  expect(deadline.timers.size).toBe(0);
+});
+
+it('renews the idle deadline for real byte progress then disposes a late stalled GLB', async () => {
+  installEnvironment(sceneRoutes('samaritan'));
+  const deadline=captureStartupDeadline();
+  const original=GLTFLoader.prototype.loadAsync;
+  let progress!: (event:ProgressEvent)=>void, release!:()=>void;
+  const pending=new Promise<void>(resolve=>{release=resolve;});
+  vi.spyOn(GLTFLoader.prototype,'loadAsync').mockImplementation(function(this:GLTFLoader,url,onProgress){
+    progress=onProgress!;
+    return pending.then(()=>original.call(this,url));
+  });
+  const disposed=vi.spyOn(BufferGeometry.prototype,'dispose');
+  const m=track(mount({}));
+  await until(()=>Boolean(progress),'GLB requested');
+  const first=[...deadline.timers.keys()][0]!;
+  progress({loaded:100} as ProgressEvent);
+  expect(deadline.timers.has(first)).toBe(false);
+  const renewed=[...deadline.timers.keys()][0]!;
+  progress({loaded:100} as ProgressEvent);
+  expect(deadline.timers.has(renewed)).toBe(true); // Duplicate byte count cannot hide a stall.
+  expect(m.marker.dataset.state).toBe('loading');
+  deadline.expire();release();
+  await until(()=>disposed.mock.calls.length>0,'late GLB disposed');
+  expect(m.marker.dataset.state).toBe('error');expect(m.rendererCreated()).toBe(false);
+});
+
+it('clears the download deadline before a hidden tab can defer presentation', async () => {
+  installEnvironment(sceneRoutes('samaritan'));
+  const deadline=captureStartupDeadline();
+  const m=track(mount({}));
+  // Hold RAF callbacks as a background tab does, while asset decoding completes.
+  for(let i=0;i<100&&!m.rendererCreated();i++)await new Promise(resolve=>setTimeout(resolve,0));
+  expect(m.rendererCreated()).toBe(true);
+  expect(m.marker.dataset.state).toBe('loading');
+  expect(deadline.timers.size).toBe(0);
+  deadline.expire();runFrames();expect(m.marker.dataset.state).toBe('ready');
 });
 
 describe("honest unavailable states", () => {
