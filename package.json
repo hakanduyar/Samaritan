@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:static": "node scripts/verify-static-export.mjs"
   },
   "dependencies": {
     "next": "16.4.1",
