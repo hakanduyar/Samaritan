@@ -111,6 +111,16 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const openingEnabled = options.openingSequence && world === "samaritan" && params.mode === "interactive";
 
   const abort = new AbortController();
+  const manager = new LoadingManager();
+  let startupTimer: number | undefined;
+  const clearStartupTimer = () => { win.clearTimeout(startupTimer); startupTimer = undefined; };
+  const startupProgress = () => {
+    if (disposed || terminal) return;
+    clearStartupTimer();
+    startupTimer = win.setTimeout(() => {
+      if (!disposed && !terminal && !ready) fail("error", "Scene download stalled", "No download progress for 45 seconds. Check your connection and retry.");
+    }, 45000);
+  };
   const cleanups: Array<() => void> = [];
   const listeners = new Set<(snapshot: PlayerSnapshot) => void>();
   let disposed = false;
@@ -165,6 +175,11 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   };
 
   const fail = (state: "missing" | "error", message: string, detail: string) => {
+    if (disposed || terminal) return;
+    terminal = true;
+    clearStartupTimer();
+    abort.abort();
+    manager.abort();
     teardownScene();
     setStatus({ state, message, detail });
   };
@@ -484,7 +499,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       if (!disposed) fail("error", "Manifest request failed", `${manifestUrl}: ${describe(error)}`);
       return;
     }
-    if (disposed) return;
+    if (disposed || terminal) return;
     if (response.status === 404) {
       fail(
         "missing",
@@ -505,7 +520,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       if (!disposed) fail("error", "Manifest is not valid JSON", describe(error));
       return;
     }
-    if (disposed) return;
+    if (disposed || terminal) return;
+    startupProgress();
 
     const validation = validateManifest(json, world);
     if (!validation.ok) {
@@ -533,19 +549,21 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     }
 
     const failedResources: string[] = [];
-    const manager = new LoadingManager();
     manager.onError = (url) => failedResources.push(url);
     let gltf: Awaited<ReturnType<GLTFLoader["loadAsync"]>>;
     try {
       // The two independent bundles may download/decode together. Each owns
       // late completion cleanup if its peer fails or the player is disposed.
-      const worldLoad = new GLTFLoader(manager).loadAsync(sceneUrl).then((value) => {
+      let worldBytes = 0;
+      const worldLoad = new GLTFLoader(manager).loadAsync(sceneUrl, (event) => {
+        if (event.loaded > worldBytes) { worldBytes = event.loaded; startupProgress(); }
+      }).then((value) => {
         if (disposed || terminal) disposeObjectTree(value.scene);
         else scene = value.scene;
         return value;
       });
       const openingLoad = openingEnabled
-        ? loadOpeningSequence(win.location.href, abort.signal, options.openingSequence === 'straight').then((value) => {
+        ? loadOpeningSequence(win.location.href, abort.signal, options.openingSequence === 'straight', startupProgress).then((value) => {
           if (disposed || terminal) value.dispose();
           else opening = value;
         })
@@ -565,6 +583,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       return;
     }
     if (disposed || terminal) return;
+    clearStartupTimer(); // Downloads finished; a hidden tab may legitimately defer its first frame.
     scene = gltf.scene;
     if (manifest.anchors?.some((anchor) => !scene!.getObjectByName(anchor.screen) || !scene!.getObjectByName(anchor.anchorNode))) {
       fail("error", "Scene violates contract", "An authored screen or anchor is absent from the imported world");
@@ -637,6 +656,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   // Renderer setup, canvas sizing and the first render can also fail after
   // WebGL construction succeeds. Never strand the opening in loading state.
+  startupProgress();
   void start().catch((error: unknown) => {
     if (!disposed && !terminal) fail("error", "Scene initialization failed", describe(error));
   });
@@ -667,7 +687,9 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     dispose() {
       if (disposed) return;
       disposed = true;
+      clearStartupTimer();
       abort.abort();
+      manager.abort();
       listeners.clear();
       teardownScene();
     },
