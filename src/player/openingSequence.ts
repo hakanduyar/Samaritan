@@ -4,9 +4,14 @@ import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {createSceneRig} from './sceneRig';
 import {disposeObjectTree} from './dispose';
 import {createOpeningClock,validateOpening} from './openingClock';
+import {assetPath} from '../contract/assetPath';
+
+export function openingAssetBase(origin:string){
+ return new URL(assetPath('/assets/samaritan/opening/'),origin);
+}
 
 export async function loadOpeningSequence(origin:string,signal:AbortSignal){
- const base=new URL('/assets/samaritan/opening/',origin);
+ const base=openingAssetBase(origin);
  const response=await fetch(new URL('opening-metadata.json',base),{signal});
  if(!response.ok)throw Error('Opening metadata HTTP '+response.status);
  const meta=validateOpening(await response.json());

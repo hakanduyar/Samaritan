@@ -22,7 +22,8 @@ await new Promise(resolve=>server.listen(Number(process.env.PORT??0),'127.0.0.1'
 const origin='http://127.0.0.1:'+server.address().port;
 const get=async(path)=>{const r=await fetch(origin+path);if(!r.ok)throw Error('HTTP '+r.status+' '+path);return r;};
 try{
- for(const path of [base+'/',base+'/'+world+'/?mode=reference&t=1.5&qa=1']){
+ const hasOpening=await stat(resolve(root,'opening-candidate/index.html')).then(()=>true,()=>false);
+ for(const path of [base+'/',base+'/'+world+'/?mode=reference&t=1.5&qa=1',...(hasOpening?[base+'/opening-candidate/']:[])]){
   const html=await(await get(path)).text();
   const scripts=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1].replaceAll('&amp;','&'));
   if(!scripts.length)throw Error('No client scripts');
@@ -36,6 +37,14 @@ try{
  const bundled=await readFile(resolve('public/assets/'+world,manifest.sceneUrl));
  const hash=b=>createHash('sha256').update(b).digest('hex');
  if(hash(served)!==hash(bundled))throw Error('Served GLB differs from bundled asset');
+ if(hasOpening){
+  const prefix='/assets/samaritan/opening/';
+  for(const name of ['opening-metadata.json','samaritan-opening.glb']){
+   const actual=Buffer.from(await(await get(base+prefix+name)).arrayBuffer());
+   if(hash(actual)!==hash(await readFile(resolve('public'+prefix+name))))throw Error('Opening asset mismatch '+name);
+  }
+  if(base&&(await fetch(origin+prefix+'opening-metadata.json')).status!==404)throw Error('Unexpected root opening fallback');
+ }
  if(base&&(await fetch(origin+'/assets/'+world+'/manifest.json')).status!==404)throw Error('Unexpected root asset fallback');
  console.log(JSON.stringify({result:'PASS',world,base,sceneSha256:hash(served),url:origin+base+'/'}));
  if(!process.argv.includes('--serve'))server.close();

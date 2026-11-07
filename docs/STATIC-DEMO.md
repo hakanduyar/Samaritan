@@ -1,5 +1,7 @@
 # Static demo deployment
 
+The optional `/opening-candidate/` route remains separate from the default scene. Its metadata and GLB use the same build-time repository prefix. The static HTTP verifier checks this route and both opening asset hashes when present; it does not certify visual quality.
+
 Local development keeps the normal Next.js server and root asset paths. Static hosting is opt-in at build time:
 
 ```sh
