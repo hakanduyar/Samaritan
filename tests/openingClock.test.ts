@@ -3,6 +3,19 @@ import {readFileSync} from 'node:fs';
 import {expect,it} from 'vitest';
 import {createOpeningClock,validateOpening} from '../src/player/openingClock';
 const meta=validateOpening(JSON.parse(readFileSync('public/assets/samaritan/opening/opening-metadata.json','utf8')));
+it('speeds forward travel only while preserving connection, command dwell and return timing',()=>{
+ const straight=validateOpening(JSON.parse(readFileSync('public/assets/samaritan/opening-straight/opening-metadata.json','utf8')),true);
+ const clock=createOpeningClock(straight,1.12);
+ expect(clock.advance(.9,false).phase).toBe('connection');
+ clock.advance(.1,false);
+ expect(clock.advance(5,false).phase).toBe('world');expect(clock.snapshot().clipTime).toBeCloseTo(5.6);
+ clock.advance((straight.phases.approach.end-5.6)/1.12+.001,false);
+ expect(clock.snapshot().phase).toBe('commands');
+ expect(clock.advance(2.9,false).phase).toBe('commands');
+ expect(clock.advance(.11,false).phase).toBe('return');
+ expect(clock.advance(.2,false).clipTime).toBeCloseTo(straight.phases.return.start+.2);
+ expect(()=>createOpeningClock(straight,0)).toThrow();
+});
 it('holds commands for visible time and does not skip the stage on a long frame',()=>{
  const clock=createOpeningClock(meta);
  expect(clock.advance(20,false).phase).toBe('world');
