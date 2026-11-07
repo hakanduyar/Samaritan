@@ -18,15 +18,14 @@ export function createStraightOpeningPane(scene:Object3D, name:string){
   if(!attached){pane.material=material;attached=true;}
   if(last===command)return;last=command;
   context.fillStyle='#f7f7f6';context.fillRect(0,0,2048,1152);
-  // Observed command frame: dark tracked text/underline, upward red triangle
-  // below the line near its left end. Font family remains an approximation.
-  context.fillStyle='#262626';context.font='500 48px monospace';context.textAlign='left';context.textBaseline='middle';
+  // Authored presentation: shared centre axis for word, underline and marker.
+  context.fillStyle='#262626';context.font='600 56px monospace';context.textAlign='left';context.textBaseline='middle';
   const spacing=4,width=context.measureText(command).width+Math.max(0,command.length-1)*spacing;
   let x=1024-width/2;
   for(const glyph of command){context.fillText(glyph,x,560);x+=context.measureText(glyph).width+spacing;}
   const left=1024-width/2;
   context.fillRect(left,593,width,3);
-  const triangleX=left+Math.min(45,width*.2);
+  const triangleX=1024;
   context.fillStyle='#d92035';context.beginPath();context.moveTo(triangleX,609);context.lineTo(triangleX-24,649);context.lineTo(triangleX+24,649);context.closePath();context.fill();texture.needsUpdate=true;
  },dispose(){pane.material=original;material.dispose();texture.dispose();}};
 }
