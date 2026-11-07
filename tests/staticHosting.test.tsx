@@ -4,6 +4,7 @@ import {assetPath} from '../src/contract/assetPath';
 import {manifestPathFor,resolveSceneUrl} from '../src/contract/manifest';
 import {queryFromSearch} from '../src/player/SceneFromLocation';
 import {parsePlayerParams} from '../src/player/time';
+import {openingAssetBase} from '../src/player/openingSequence';
 import Index from '../app/page';
 import Page from '../app/samaritan/page';
 vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams('mode=reference&t=1.5&t=99&qa=1'),redirect:vi.fn()}));
@@ -14,6 +15,9 @@ it('resolves root and repository subpath assets without changing relative scene 
  const manifest=new URL(manifestPathFor('samaritan'),'https://example.test/Samaritan/samaritan/?t=1');
  expect(manifest.pathname).toBe('/Samaritan/assets/samaritan/manifest.json');
  expect(resolveSceneUrl(manifest.href,'./scene.glb')).toBe('https://example.test/Samaritan/assets/samaritan/scene.glb');
+ const opening=openingAssetBase('https://example.test/Samaritan/opening-candidate/');
+ expect(new URL('opening-metadata.json',opening).href).toBe('https://example.test/Samaritan/assets/samaritan/opening/opening-metadata.json');
+ expect(new URL('samaritan-opening.glb',opening).href).toBe('https://example.test/Samaritan/assets/samaritan/opening/samaritan-opening.glb');
  expect(()=>assetPath('/assets/x','//outside.test')).toThrow();
 });
 it('preserves duplicate-query first-value semantics on static root and scene routes',async()=>{
