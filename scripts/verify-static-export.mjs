@@ -7,6 +7,10 @@ const root=resolve('out'),base=process.env.NEXT_PUBLIC_BASE_PATH??'';
 if(base&&!/^\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/.test(base))throw Error('Invalid base path');
 const pkg=JSON.parse(await readFile('package.json','utf8'));
 const world=pkg.name==='samaritan'?'samaritan':'machine';
+const manifestBytes=await readFile('public/assets/'+world+'/manifest.json');
+const bundledManifest=JSON.parse(manifestBytes.toString());
+const sceneRevision=createHash('sha256').update(manifestBytes).update(await readFile(resolve('public/assets/'+world,bundledManifest.sceneUrl))).digest('hex');
+let clientSource='';
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.glb':'model/gltf-binary'};
 const server=createServer(async(req,res)=>{
  try{
@@ -27,20 +31,24 @@ try{
   const html=await(await get(path)).text();
   const scripts=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1].replaceAll('&amp;','&'));
   if(!scripts.length)throw Error('No client scripts');
-  for(const asset of scripts){if(!asset.startsWith(base+'/_next/'))throw Error('Unprefixed script '+asset);await get(asset);}
+  for(const asset of scripts){if(!asset.startsWith(base+'/_next/'))throw Error('Unprefixed script '+asset);clientSource+=await(await get(asset)).text();}
  }
  const manifestPath=base+'/assets/'+world+'/manifest.json';
- const manifest=await(await get(manifestPath)).json();
+ if(!clientSource.includes(sceneRevision))throw Error('Client does not contain deployed scene revision');
+ const manifest=await(await get(manifestPath+'?revision='+sceneRevision)).json();
  const glbUrl=new URL(manifest.sceneUrl,origin+manifestPath);
  if(!glbUrl.pathname.startsWith(base+'/assets/'+world+'/'))throw Error('Scene escaped asset prefix');
- const served=Buffer.from(await(await get(glbUrl.pathname)).arrayBuffer());
+ glbUrl.searchParams.set('revision',sceneRevision);
+ const served=Buffer.from(await(await get(glbUrl.pathname+glbUrl.search)).arrayBuffer());
  const bundled=await readFile(resolve('public/assets/'+world,manifest.sceneUrl));
  const hash=b=>createHash('sha256').update(b).digest('hex');
  if(hash(served)!==hash(bundled))throw Error('Served GLB differs from bundled asset');
  if(hasOpening){
   const prefix='/assets/samaritan/opening/';
+  const openingRevision=createHash('sha256').update(await readFile('public'+prefix+'opening-metadata.json')).update(await readFile('public'+prefix+'samaritan-opening.glb')).digest('hex');
+  if(!clientSource.includes(openingRevision))throw Error('Client does not contain deployed opening revision');
   for(const name of ['opening-metadata.json','samaritan-opening.glb']){
-   const actual=Buffer.from(await(await get(base+prefix+name)).arrayBuffer());
+   const actual=Buffer.from(await(await get(base+prefix+name+'?revision='+openingRevision)).arrayBuffer());
    if(hash(actual)!==hash(await readFile(resolve('public'+prefix+name))))throw Error('Opening asset mismatch '+name);
   }
   if(base&&(await fetch(origin+prefix+'opening-metadata.json')).status!==404)throw Error('Unexpected root opening fallback');
