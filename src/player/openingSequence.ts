@@ -29,6 +29,6 @@ export async function loadOpeningSequence(origin:string,signal:AbortSignal,strai
   const pane=straight?createStraightOpeningPane(gltf.scene,meta.paneNode):createOpeningPane(gltf.scene,meta.paneNode);
   cleanupPane=()=>pane.dispose();
   const vignette=createOpeningVignette(gltf.scene);
-  return {scene:gltf.scene,rig,clock,maskedReturn:straight,prepare(){const state=clock.snapshot();vignette.apply(openingVignetteOpacity(state.phase,state.clipTime,meta));if(straight){if(state.phase==='commands')pane.show(state.command);}else if(state.phase==='commands'||state.phase==='return'||(state.phase==='world'&&state.clipTime>=meta.phases.approach.start))pane.show(state.command||(state.phase==='return'?'SAMARITAN':'WHAT'));},dispose(){vignette.dispose();pane.dispose();rig.dispose();disposeObjectTree(gltf.scene);}};
+  return {scene:gltf.scene,rig,clock,maskedReturn:straight,prepare(){const state=clock.snapshot();vignette.apply(straight?0:openingVignetteOpacity(state.phase,state.clipTime,meta));if(straight){if(state.phase==='commands')pane.show(state.command);}else if(state.phase==='commands'||state.phase==='return'||(state.phase==='world'&&state.clipTime>=meta.phases.approach.start))pane.show(state.command||(state.phase==='return'?'SAMARITAN':'WHAT'));},dispose(){vignette.dispose();pane.dispose();rig.dispose();disposeObjectTree(gltf.scene);}};
  }catch(error){cleanupPane?.();cleanupRig?.();disposeObjectTree(gltf.scene);throw error;}
 }
