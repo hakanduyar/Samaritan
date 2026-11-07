@@ -1,0 +1,98 @@
+{
+  "duration": 90.920601,
+  "endZ": 8.606550216674805,
+  "openingRest": [
+    0,
+    1
+  ],
+  "endRest": [
+    89.420601,
+    90.920601
+  ],
+  "screens": [
+    {
+      "id": "screen_01",
+      "anchor": "anchor_screen_01",
+      "times": {
+        "travelStart": 1,
+        "cameraArrives": 4.22,
+        "approachStart": 4.72,
+        "holdStart": 7.12,
+        "holdMid": 8.72,
+        "holdEnd": 10.320001,
+        "returned": 12.52,
+        "eventEnd": 13.02
+      }
+    },
+    {
+      "id": "screen_02",
+      "anchor": "anchor_screen_02",
+      "times": {
+        "travelStart": 13.02,
+        "cameraArrives": 19.693335,
+        "approachStart": 20.193335,
+        "holdStart": 22.593334,
+        "holdMid": 24.193334,
+        "holdEnd": 25.793335,
+        "returned": 27.993336,
+        "eventEnd": 28.493336
+      }
+    },
+    {
+      "id": "screen_03",
+      "anchor": "anchor_screen_03",
+      "times": {
+        "travelStart": 28.493336,
+        "cameraArrives": 34.793335,
+        "approachStart": 35.293335,
+        "holdStart": 37.693336,
+        "holdMid": 39.293337,
+        "holdEnd": 40.893337,
+        "returned": 43.093338,
+        "eventEnd": 43.593338
+      }
+    },
+    {
+      "id": "screen_04",
+      "anchor": "anchor_screen_04",
+      "times": {
+        "travelStart": 43.593338,
+        "cameraArrives": 50.053337,
+        "approachStart": 50.553337,
+        "holdStart": 52.953339,
+        "holdMid": 54.553339,
+        "holdEnd": 56.153339,
+        "returned": 58.35334,
+        "eventEnd": 58.85334
+      }
+    },
+    {
+      "id": "screen_05",
+      "anchor": "anchor_screen_05",
+      "times": {
+        "travelStart": 58.85334,
+        "cameraArrives": 65.200005,
+        "approachStart": 65.700005,
+        "holdStart": 68.100006,
+        "holdMid": 69.700005,
+        "holdEnd": 71.300003,
+        "returned": 73.5,
+        "eventEnd": 74
+      }
+    },
+    {
+      "id": "focal_screen",
+      "anchor": "anchor_focal_screen",
+      "times": {
+        "travelStart": 74,
+        "cameraArrives": 80.620605,
+        "approachStart": 81.120605,
+        "holdStart": 83.520607,
+        "holdMid": 85.120605,
+        "holdEnd": 86.720604,
+        "returned": 88.920601,
+        "eventEnd": 89.420601
+      }
+    }
+  ]
+}
