@@ -26,7 +26,7 @@ export async function loadOpeningSequence(origin:string,signal:AbortSignal,strai
  signal.addEventListener('abort',cancel,{once:true});
  let bytes=0;
  const gltf=await new GLTFLoader(manager).loadAsync(revisionedAsset(new URL('samaritan-opening.glb',base).href,revision),(event)=>{
-  if(event.loaded>bytes){bytes=event.loaded;onProgress();}
+  if(Number.isFinite(event.loaded)&&event.loaded>bytes){bytes=event.loaded;onProgress();}
  }).finally(()=>signal.removeEventListener('abort',cancel));
  if(signal.aborted){disposeObjectTree(gltf.scene);throw Error('Opening cancelled');}
  let cleanupRig:(()=>void)|undefined;

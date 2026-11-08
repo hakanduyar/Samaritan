@@ -556,7 +556,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       // late completion cleanup if its peer fails or the player is disposed.
       let worldBytes = 0;
       const worldLoad = new GLTFLoader(manager).loadAsync(sceneUrl, (event) => {
-        if (event.loaded > worldBytes) { worldBytes = event.loaded; startupProgress(); }
+        if (Number.isFinite(event.loaded) && event.loaded > worldBytes) { worldBytes = event.loaded; startupProgress(); }
       }).then((value) => {
         if (disposed || terminal) disposeObjectTree(value.scene);
         else scene = value.scene;

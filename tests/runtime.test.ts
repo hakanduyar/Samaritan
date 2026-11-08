@@ -241,6 +241,8 @@ it('renews the idle deadline for real byte progress then disposes a late stalled
   const renewed=[...deadline.timers.keys()][0]!;
   progress({loaded:100} as ProgressEvent);
   expect(deadline.timers.has(renewed)).toBe(true); // Duplicate byte count cannot hide a stall.
+  progress({loaded:Infinity} as ProgressEvent);progress({loaded:NaN} as ProgressEvent);
+  expect(deadline.timers.has(renewed)).toBe(true); // Invalid byte counts are not progress.
   expect(m.marker.dataset.state).toBe('loading');
   deadline.expire();release();
   await until(()=>disposed.mock.calls.length>0,'late GLB disposed');
