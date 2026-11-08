@@ -751,12 +751,13 @@ it('integrates straight opening into one clock with early input/hidden guards an
  const geometry=pane.geometry,originalUv=Array.from(geometry.getAttribute('uv').array),originalMaterial=pane.material;
  wheel(m.host,3000);m.handle.controller.seek(20);m.handle.controller.setInteractionReady();
  expect(m.handle.controller.getSnapshot()!.targetTime).toBe(0);
- runFrames(110,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
+ expect((pane.material as unknown as {map:{isCanvasTexture:boolean}}).map.isCanvasTexture).toBe(true); // Symbol replaces photo before approach.
+ runFrames(25,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
  expect(vignetteOpacity()).toBe(0); // white opening edges throughout travel, normal-world material is separate
- expect(paint).not.toHaveBeenCalled(); // retain the real photograph until full-pane hold
+ expect(paint).not.toHaveBeenCalled(); // Triangle-only surface is already present; words start at full coverage.
  for(let i=0;i<35&&m.openingStates.at(-1)!.phase!=='commands';i++)runFrames(1,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
  expect(pane.geometry).toBe(geometry);expect(Array.from(geometry.getAttribute('uv').array)).toEqual(originalUv);
- expect(pane.material).not.toBe(originalMaterial);expect(paint).toHaveBeenCalled();
+ expect(pane.material).toBe(originalMaterial);expect(paint).toHaveBeenCalled(); // Same surface, no photo-to-command material swap.
  const commandMaterial=pane.material;
  const focus=m.renderer.frames.at(-1)!.position;
  Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'));

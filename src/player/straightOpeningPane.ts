@@ -13,10 +13,12 @@ export function createStraightOpeningPane(scene:Object3D, name:string){
  const texture=new CanvasTexture(canvas);texture.colorSpace=SRGBColorSpace;texture.flipY=false;
  texture.repeat.set(1/(maxU-minU),1/(maxV-minV));texture.offset.set(-minU/(maxU-minU),-minV/(maxV-minV));
  const original=pane.material,material=original.clone();material.map=texture;
- let attached=false,last='';
- return {show(command:string){
+ let attached=false,last:string|null=null;
+ return {show(command:string,visualTime=0){
   if(!attached){pane.material=material;attached=true;}
-  if(last===command)return;last=command;
+  const visible=Math.floor(Math.max(0,visualTime)/.5)%2===0;
+  const key=command+'|'+visible;
+  if(last===key)return;last=key;
   context.fillStyle='#f7f7f6';context.fillRect(0,0,2048,1152);
   // Authored presentation: shared centre axis for word, underline and marker.
   context.fillStyle='#262626';context.font='600 56px monospace';context.textAlign='left';context.textBaseline='middle';
@@ -26,6 +28,6 @@ export function createStraightOpeningPane(scene:Object3D, name:string){
   const left=1024-width/2;
   context.fillRect(left,593,width,3);
   const triangleX=1024;
-  context.fillStyle='#d92035';context.beginPath();context.moveTo(triangleX,609);context.lineTo(triangleX-24,649);context.lineTo(triangleX+24,649);context.closePath();context.fill();texture.needsUpdate=true;
+  if(visible){context.fillStyle='#d92035';context.beginPath();context.moveTo(triangleX,609);context.lineTo(triangleX-24,649);context.lineTo(triangleX+24,649);context.closePath();context.fill();}texture.needsUpdate=true;
  },dispose(){pane.material=original;material.dispose();texture.dispose();}};
 }

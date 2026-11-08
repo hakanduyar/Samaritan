@@ -1,4 +1,4 @@
-import { LoadingManager, WebGLRenderer, type Camera, type ColorRepresentation, type Object3D } from "three";
+import { LoadingManager, Mesh, WebGLRenderer, type Camera, type ColorRepresentation, type Object3D } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import {
@@ -211,7 +211,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if(opening && state && state.phase!=='complete'){
       // Keep the opaque command frame during the straight variant's masked return.
       if(!opening.maskedReturn||state.phase!=='return'){
-        opening.prepare();opening.rig.seek(state.clipTime);renderer.render(opening.scene,opening.rig.camera);
+        opening.rig.seek(state.clipTime);opening.prepare();renderer.render(opening.scene,opening.rig.camera);
       }
     }else{currentTime=rig.seek(currentTime);ambient?.apply();renderer.render(scene,rig.camera);}
     if(state && openingLabel!==state.phase+state.command){openingLabel=state.phase+state.command;options.onOpening?.({phase:state.phase,command:state.command});}
@@ -327,7 +327,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     const frozenReturn=straightVisible&&opening?.clock.snapshot().phase==='return';
     const width=Math.max(host.clientWidth,host.clientHeight*manifest.sourceAspectRatio);
     const height=width/manifest.sourceAspectRatio;
-    const rect = straightVisible
+    const rect = straightVisible || (world==='samaritan' && !exact)
       ? {x:(host.clientWidth-width)/2,y:(host.clientHeight-height)/2,width,height}
       : letterbox(host.clientWidth, host.clientHeight, manifest.sourceAspectRatio);
     frame.style.left = `${rect.x}px`;
@@ -599,6 +599,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (world === "samaritan" && params.mode === "interactive") {
       const statusPanel = scene.getObjectByName("status_rig");
       if (statusPanel) statusPanel.visible = false;
+      const vignette=scene.getObjectByName('fx_vignette');
+      if(vignette instanceof Mesh&&!Array.isArray(vignette.material))vignette.material.opacity*=.08;
     }
     if (failedResources.length > 0) {
       fail("error", "Scene resources failed to load", failedResources.join(", "));
