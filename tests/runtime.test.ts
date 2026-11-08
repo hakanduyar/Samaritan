@@ -755,7 +755,7 @@ it('integrates straight opening into one clock with early input/hidden guards an
  runFrames(25,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
  expect(vignetteOpacity()).toBe(0); // white opening edges throughout travel, normal-world material is separate
  expect(paint).not.toHaveBeenCalled(); // Triangle-only surface is already present; words start at full coverage.
- for(let i=0;i<35&&m.openingStates.at(-1)!.phase!=='commands';i++)runFrames(1,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
+ for(let i=0;i<Math.ceil(metadata.phases.approach.end/.112)+5&&m.openingStates.at(-1)!.phase!=='commands';i++)runFrames(1,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
  expect(pane.geometry).toBe(geometry);expect(Array.from(geometry.getAttribute('uv').array)).toEqual(originalUv);
  expect(pane.material).toBe(originalMaterial);expect(paint).toHaveBeenCalled(); // Same surface, no photo-to-command material swap.
  const commandMaterial=pane.material;

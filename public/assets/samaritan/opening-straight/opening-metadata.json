@@ -3,27 +3,27 @@
   "timeBasis": "authored",
   "openingClipName": "samaritan_opening",
   "openingCameraName": "route_camera_lens",
-  "durationSeconds": 7,
+  "durationSeconds": 16.5,
   "paneNode": "focal_screen",
   "phases": {
     "worldTravel": {
       "start": 0,
-      "end": 3,
-      "durationSeconds": 3
+      "end": 10.5,
+      "durationSeconds": 10.5
     },
     "approach": {
-      "start": 3,
-      "end": 4.5,
-      "durationSeconds": 1.5
+      "start": 10.5,
+      "end": 14,
+      "durationSeconds": 3.5
     },
     "paneHold": {
-      "start": 4.5,
-      "end": 6.5,
+      "start": 14,
+      "end": 16,
       "durationSeconds": 2
     },
     "return": {
-      "start": 6.5,
-      "end": 7,
+      "start": 16,
+      "end": 16.5,
       "durationSeconds": 0.5,
       "hidden": true
     }
@@ -32,7 +32,7 @@
     "interactiveTimeSeconds": 0
   },
   "commandOpaqueMask": {
-    "start": 6.25,
-    "end": 7
+    "start": 15.75,
+    "end": 16.5
   }
 }
