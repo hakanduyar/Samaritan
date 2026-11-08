@@ -118,7 +118,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (disposed || terminal) return;
     clearStartupTimer();
     startupTimer = win.setTimeout(() => {
-      if (!disposed && !terminal && !ready) fail("error", "Scene download stalled", "No download progress for 45 seconds. Check your connection and retry.");
+      if (!disposed && !terminal && !ready) fail("error", "Scene asset loading stalled", "No loading progress for 45 seconds. Check your connection and retry.");
     }, 45000);
   };
   const cleanups: Array<() => void> = [];

@@ -214,7 +214,7 @@ it('times out a stalled manifest and rejects its late completion without creatin
   vi.stubGlobal('fetch',vi.fn(()=>new Promise<Response>(resolve=>{release=resolve;})));
   const m=track(mount({}));
   deadline.expire();
-  expect(m.statuses.at(-1)).toMatchObject({state:'error',message:'Scene download stalled'});
+  expect(m.statuses.at(-1)).toMatchObject({state:'error',message:'Scene asset loading stalled'});
   release(Response.json(fixtureManifest('samaritan')));
   await Promise.resolve();await Promise.resolve();runFrames();
   expect(m.marker.dataset.state).toBe('error');
@@ -245,6 +245,37 @@ it('renews the idle deadline for real byte progress then disposes a late stalled
   deadline.expire();release();
   await until(()=>disposed.mock.calls.length>0,'late GLB disposed');
   expect(m.marker.dataset.state).toBe('error');expect(m.rendererCreated()).toBe(false);
+});
+
+it('disposes a late opening GLB after its timeout even when the world has completed', async () => {
+  const routes=sceneRoutes('samaritan');
+  routes['/assets/samaritan/opening-straight/opening-metadata.json']=()=>Response.json(
+    JSON.parse(readFileSync('public/assets/samaritan/opening-straight/opening-metadata.json','utf8')));
+  installEnvironment(routes);
+  const deadline=captureStartupDeadline();
+  const original=GLTFLoader.prototype.loadAsync;
+  const geometry=new BufferGeometry(),lateScene=new Mesh(geometry);
+  const dispose=vi.spyOn(geometry,'dispose');
+  let worldDone=false,release!:()=>void,openingAbort:ReturnType<typeof vi.spyOn>|undefined;
+  const pending=new Promise<void>(resolve=>{release=resolve;});
+  vi.spyOn(GLTFLoader.prototype,'loadAsync').mockImplementation(function(this:GLTFLoader,url,onProgress){
+    if(url.includes('/opening-straight/')){
+      openingAbort=vi.spyOn(this.manager,'abort');
+      // Simulate a decoder that resolves after cancellation rather than rejecting.
+      return pending.then(()=>({scene:lateScene} as unknown as Awaited<ReturnType<GLTFLoader['loadAsync']>>));
+    }
+    return original.call(this,url,onProgress).then(value=>{worldDone=true;return value;});
+  });
+  const m=track(mount({},'samaritan',false,'straight'));
+  await until(()=>worldDone&&Boolean(openingAbort),'world complete and opening pending');
+  expect(m.marker.dataset.state).toBe('loading');expect(m.rendererCreated()).toBe(false);
+  deadline.expire();
+  expect(openingAbort).toHaveBeenCalledTimes(1);
+  expect(m.statuses.at(-1)).toMatchObject({state:'error',message:'Scene asset loading stalled'});
+  release();await until(()=>dispose.mock.calls.length>0,'late opening geometry disposed');
+  expect(dispose).toHaveBeenCalledTimes(1);
+  expect(m.marker.dataset.state).toBe('error');expect(m.rendererCreated()).toBe(false);
+  expect(m.openingStates).toHaveLength(0);expect(deadline.timers.size).toBe(0);
 });
 
 it('clears the download deadline before a hidden tab can defer presentation', async () => {
