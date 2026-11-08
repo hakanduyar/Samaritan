@@ -20,6 +20,6 @@ export function OpeningWorldPlayer({straight=false}:{straight?:boolean}){
   {connection&&<div className="sam-startup" role="status" aria-label="Scene connection ready">
     <div className="sam-connection">CONNECTION ESTABLISHED</div>
   </div>}
-  {status.state!=='ready'&&status.state!=='loading'&&<div className="ref-status" role="alert"><p>{status.message}</p><p>{status.detail}</p><button type="button" onClick={()=>window.location.reload()}>Retry</button></div>}
+  {status.state!=='ready'&&status.state!=='loading'&&<div className="ref-status sam-error" role="alert"><div className="ref-error-card"><p className="ref-status-title">{status.message}</p><p className="ref-status-detail">{status.detail}</p><button type="button" onClick={()=>window.location.reload()}>Retry</button></div></div>}
  </main>;
 }

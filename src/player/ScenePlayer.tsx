@@ -67,7 +67,7 @@ export function ScenePlayer({ world, query }: ScenePlayerProps) {
           {status.state === "loading" ? (
             <p>{label}: loading scene…</p>
           ) : (
-            <div>
+            <div className="ref-error-card">
               <p className="ref-status-title">
                 {label}: {status.message}
               </p>

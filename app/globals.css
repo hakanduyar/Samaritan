@@ -47,6 +47,25 @@ body {
   max-width: 60ch;
 }
 
+.ref-error-card {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  max-width: 60ch;
+}
+
+.ref-error-card button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+
+.sam-error { color: #444; }
+.sam-error .ref-status-title { color: #262626; }
+
 .ref-qa {
   position: fixed;
   left: 8px;
