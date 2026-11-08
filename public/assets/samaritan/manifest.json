@@ -50,27 +50,27 @@
   "sceneUrl": "./scene.glb",
   "referenceFrames": [
     {
-      "timeSeconds": 8.72,
+      "timeSeconds": 8.7200005,
       "evidencePath": "hold-1"
     },
     {
-      "timeSeconds": 24.193334,
+      "timeSeconds": 27.5299985,
       "evidencePath": "hold-2"
     },
     {
-      "timeSeconds": 39.293337,
+      "timeSeconds": 45.7800005,
       "evidencePath": "hold-3"
     },
     {
-      "timeSeconds": 54.553339,
+      "timeSeconds": 64.2700025,
       "evidencePath": "hold-4"
     },
     {
-      "timeSeconds": 69.700005,
+      "timeSeconds": 82.5899965,
       "evidencePath": "hold-5"
     },
     {
-      "timeSeconds": 85.120605,
+      "timeSeconds": 101.3208925,
       "evidencePath": "hold-6"
     }
   ]
