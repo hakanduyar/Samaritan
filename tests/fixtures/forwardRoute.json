@@ -1,13 +1,13 @@
 {
-  "duration": 90.920601,
-  "endZ": 8.606550216674805,
+  "duration": 107.120888,
+  "endZ": 33.526199,
   "openingRest": [
     0,
     1
   ],
   "endRest": [
-    89.420601,
-    90.920601
+    105.620888,
+    107.120888
   ],
   "screens": [
     {
@@ -18,7 +18,7 @@
         "cameraArrives": 4.22,
         "approachStart": 4.72,
         "holdStart": 7.12,
-        "holdMid": 8.72,
+        "holdMid": 8.7200005,
         "holdEnd": 10.320001,
         "returned": 12.52,
         "eventEnd": 13.02
@@ -29,69 +29,69 @@
       "anchor": "anchor_screen_02",
       "times": {
         "travelStart": 13.02,
-        "cameraArrives": 19.693335,
-        "approachStart": 20.193335,
-        "holdStart": 22.593334,
-        "holdMid": 24.193334,
-        "holdEnd": 25.793335,
-        "returned": 27.993336,
-        "eventEnd": 28.493336
+        "cameraArrives": 23.029999,
+        "approachStart": 23.529999,
+        "holdStart": 25.929998,
+        "holdMid": 27.5299985,
+        "holdEnd": 29.129999,
+        "returned": 31.33,
+        "eventEnd": 31.83
       }
     },
     {
       "id": "screen_03",
       "anchor": "anchor_screen_03",
       "times": {
-        "travelStart": 28.493336,
-        "cameraArrives": 34.793335,
-        "approachStart": 35.293335,
-        "holdStart": 37.693336,
-        "holdMid": 39.293337,
-        "holdEnd": 40.893337,
-        "returned": 43.093338,
-        "eventEnd": 43.593338
+        "travelStart": 31.83,
+        "cameraArrives": 41.279999,
+        "approachStart": 41.779999,
+        "holdStart": 44.18,
+        "holdMid": 45.7800005,
+        "holdEnd": 47.380001,
+        "returned": 49.580002,
+        "eventEnd": 50.080002
       }
     },
     {
       "id": "screen_04",
       "anchor": "anchor_screen_04",
       "times": {
-        "travelStart": 43.593338,
-        "cameraArrives": 50.053337,
-        "approachStart": 50.553337,
-        "holdStart": 52.953339,
-        "holdMid": 54.553339,
-        "holdEnd": 56.153339,
-        "returned": 58.35334,
-        "eventEnd": 58.85334
+        "travelStart": 50.080002,
+        "cameraArrives": 59.77,
+        "approachStart": 60.27,
+        "holdStart": 62.670002,
+        "holdMid": 64.2700025,
+        "holdEnd": 65.870003,
+        "returned": 68.07,
+        "eventEnd": 68.57
       }
     },
     {
       "id": "screen_05",
       "anchor": "anchor_screen_05",
       "times": {
-        "travelStart": 58.85334,
-        "cameraArrives": 65.200005,
-        "approachStart": 65.700005,
-        "holdStart": 68.100006,
-        "holdMid": 69.700005,
-        "holdEnd": 71.300003,
-        "returned": 73.5,
-        "eventEnd": 74
+        "travelStart": 68.57,
+        "cameraArrives": 78.089996,
+        "approachStart": 78.589996,
+        "holdStart": 80.989998,
+        "holdMid": 82.5899965,
+        "holdEnd": 84.189995,
+        "returned": 86.389992,
+        "eventEnd": 86.889992
       }
     },
     {
       "id": "focal_screen",
       "anchor": "anchor_focal_screen",
       "times": {
-        "travelStart": 74,
-        "cameraArrives": 80.620605,
-        "approachStart": 81.120605,
-        "holdStart": 83.520607,
-        "holdMid": 85.120605,
-        "holdEnd": 86.720604,
-        "returned": 88.920601,
-        "eventEnd": 89.420601
+        "travelStart": 86.889992,
+        "cameraArrives": 96.820892,
+        "approachStart": 97.320892,
+        "holdStart": 99.720894,
+        "holdMid": 101.3208925,
+        "holdEnd": 102.920891,
+        "returned": 105.120888,
+        "eventEnd": 105.620888
       }
     }
   ]
