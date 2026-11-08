@@ -8,9 +8,11 @@ it('speeds forward travel only while preserving connection, command dwell and re
  const clock=createOpeningClock(straight,1.12);
  expect(clock.advance(.9,false).phase).toBe('connection');
  clock.advance(.1,false);
- expect(clock.advance(5,false).phase).toBe('world');expect(clock.snapshot().clipTime).toBeCloseTo(5.6);
- clock.advance((straight.phases.approach.end-5.6)/1.12+.001,false);
+ expect(clock.advance(1,false).phase).toBe('world');expect(clock.snapshot().clipTime).toBeCloseTo(1.12);
+ const before=clock.snapshot().visualTime;
+ clock.advance((straight.phases.approach.end-1.12)/1.12+.001,false);
  expect(clock.snapshot().phase).toBe('commands');
+ expect(clock.snapshot().visualTime).toBeGreaterThan(before); // Blink clock never resets at the phase change.
  expect(clock.advance(2.9,false).phase).toBe('commands');
  expect(clock.advance(.11,false).phase).toBe('return');
  expect(clock.advance(.2,false).clipTime).toBeCloseTo(straight.phases.return.start+.2);
