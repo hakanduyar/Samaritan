@@ -1,0 +1,50 @@
+Recorded feed porch-walk - credits, provenance and license
+==========================================================
+
+Files in this directory
+  loop.mp4        16-second muted excerpt (H.264 crf 25, 960x540 square pixels, 30 fps, faststart)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored head marker track
+  loop.mp4 SHA-256: 7DDDE5A07DA19F6CAA1658264829BA10475A2409C26C5ABAE87F2021817B8986
+  loop.mp4 size:    730718 bytes
+
+Source
+  MEVA (Multiview Extended Video with Activities) dataset, camera bus.G506
+  (inward view of a porch and door), file:
+  https://mevadata-public-01.s3.amazonaws.com/drops-123-r13/2018-03-07/16/2018-03-07.16-50-00.16-55-00.bus.G506.r13.avi
+  Excerpt: source seconds 276 to 292 of that file. The scene is staged for the
+  dataset (research actor). This camera shares a terminal site with another,
+  outward-facing road camera; it is a different view, not a different site.
+
+Attribution
+  Video and poster: derivative of MEVA, Kitware, Inc. / IARPA. https://mevadata.org/
+
+License
+  The source video is offered under the Creative Commons Attribution 4.0
+  International license (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+  Dataset license statement: https://mevadata.org/resources/MEVA-data-license.txt
+  Provided you give appropriate credit, link to the license and indicate if
+  changes were made, you may share and adapt the material. This file is a
+  summary, not the license.
+
+Changes made (derivative material)
+  - Cut a 16-second excerpt in native time, forward only (no reverse, no
+    retiming, no crossfade).
+  - Fixed crop of the 1920x1072 native frame (x 0, y 240, width 1440, height
+    810), then scaled to 960x540 square pixels.
+  - Removed audio and container metadata; re-encoded as H.264 MP4, 30 fps,
+    with timestamps starting at 0.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: a hand-authored head
+    bounding box (normalized, top-left origin) with explicit invisible keys
+    before entry, while hidden behind the porch column and after exit. It is
+    not output of live inference and not an identification of any person. It
+    is offered under CC BY 4.0.
+
+Notes
+  - Ordinary recorded replay shown inside a fictional interface. It is not a
+    live camera, and the loop point is not guaranteed to be seamless.
+  - Not television footage; not affiliated with or endorsed by MEVA, Kitware,
+    IARPA or the original production.
+  - License scope: loop.mp4 and poster.jpg retain CC BY 4.0. The project's MIT
+    license does not apply to this directory; the application code remains MIT.

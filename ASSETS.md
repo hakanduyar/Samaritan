@@ -22,12 +22,13 @@ OpenAI image generation produced the synthetic photographic stills. Existing emb
 
 ## Recorded feeds (optional)
 
-`public/assets/recorded-feeds/{terminal-walk,s00,s01,s02,s03,aircargo}/` hold media used only when `?recordedFeed=1` is requested; `{harbor,s04,s05,s06}/` are fetched only with `?recordedFeed=1&itinerary=extended`. Each directory has `loop.mp4` (muted H.264), `poster.jpg`, `tracking.json` and a `CREDITS.txt`. These are ordinary recorded replays shown inside a fictional interface, not live cameras, and the loop point is not guaranteed to be seamless.
+`public/assets/recorded-feeds/{terminal-walk,porch-walk,s01,s02,s03,aircargo}/` hold media used only when `?recordedFeed=1` is requested; `{harbor,s04,s05,s06}/` are fetched only with `?recordedFeed=1&itinerary=extended`. Each directory has `loop.mp4` (muted H.264), `poster.jpg`, `tracking.json` and a `CREDITS.txt`. These are ordinary recorded replays shown inside a fictional interface, not live cameras, and the loop point is not guaranteed to be seamless.
 
 | Material | Origin | License |
 |---|---|---|
 | terminal-walk `loop.mp4` and `poster.jpg` | 20-second excerpt (source seconds 46-66) of MEVA camera admin.G329 (Kitware, Inc. / IARPA); staged research actor | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
-| s00-s03 `loop.mp4` and `poster.jpg` | Excerpts of the MEVA dataset (Kitware, Inc. / IARPA) | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
+| porch-walk `loop.mp4` and `poster.jpg` | 16-second excerpt (source seconds 276-292, fixed crop, 960x540) of MEVA camera bus.G506 (Kitware, Inc. / IARPA), an inward porch/door view at a terminal site shared with another outward road camera; staged research actor. Derivative; tracking.json is original, CC BY 4.0. The previous `s00/` files are retained unused for rollback | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
+| s01-s03 `loop.mp4` and `poster.jpg` | Excerpts of the MEVA dataset (Kitware, Inc. / IARPA) | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
 | s04-s06 `loop.mp4` and `poster.jpg` | Excerpts of the MEVA dataset (Kitware, Inc. / IARPA) | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
 | harbor `loop.mp4` and `poster.jpg` | NASA's Goddard Space Flight Center, [SVS 13974](https://svs.gsfc.nasa.gov/13974/) | Public domain under the [NASA SVS policy](https://svs.gsfc.nasa.gov/help/), with credit; not relicensed as MIT |
 | aircargo `loop.mp4` and `poster.jpg` | NASA's Goddard Space Flight Center, [SVS 12881](https://svs.gsfc.nasa.gov/12881/) | Public domain under the [NASA SVS policy](https://svs.gsfc.nasa.gov/help/), with credit; not relicensed as MIT |
