@@ -7,7 +7,7 @@ See [architecture decisions](decisions/README.md) for the current technology rat
 - `src/player/sceneRig.ts`: binds the imported camera and animation; evaluates exact authored time with Three's animation mixer.
 - `src/player/runtime.ts`: rendering, input, bounded manual traversal, playback and visibility lifecycle.
 - `src/player/Startup.tsx`: foreground-time opening sequence and interaction barrier.
-- `src/player/ambient.ts`: allowlisted static far-cell motion on a separate foreground clock.
+- `src/player/ambient.ts`: bounded static-rail selection with slow, stepped and continuous reel motion on a separate foreground clock; camera-aware recycling preserves focus panes and owns its temporary resources.
 - `public/assets/samaritan/`: the bundled scene and minimal public manifest.
 - `tests/`: contract, timing, route and lifecycle checks.
 

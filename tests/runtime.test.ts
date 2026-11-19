@@ -572,10 +572,18 @@ it('integrates actual selected rails with intro release, hidden pause, reverse s
  vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
  const m=track(mount({},'samaritan',false));
  await until(()=>m.marker.dataset.state==='ready','actual world ready');
- expect(m.marker.dataset.ambientRails).toBe('14');
- const rail=m.renderer.scene!.getObjectByName('strip_072_b2')!;
+ expect(Number(m.marker.dataset.ambientRails)).toBeGreaterThanOrEqual(80);
+ expect(Number(m.marker.dataset.ambientRails)).toBeLessThanOrEqual(144);
+ // Pick a continuous rail from an isolated scene copy instead of relying on
+ // a name from the retired fourteen-rail allowlist. Keep the runtime pause,
+ // seek and reduced-motion assertions below unchanged.
+ const {createAmbientRails}=await import('../src/player/ambient');
+ const selectionProbe=createAmbientRails(m.renderer.scene!.clone(true),[],manifest.anchors.flatMap((a:{screen:string;anchorNode:string})=>[a.screen,a.anchorNode]));
+ const selectedName=selectionProbe.selection.find(({mode})=>mode==='sine')!.name;
+ selectionProbe.dispose();
+ const rail=m.renderer.scene!.getObjectByName(selectedName)!;
  let cell:Mesh|null=null;
- rail.traverse(n=>{if(n instanceof Mesh&&!Array.isArray(n.material)&&n.material.name==='mat_field_cell_b2')cell=n;});
+ rail.traverse(n=>{if(n instanceof Mesh&&!Array.isArray(n.material)&&/^mat_field_cell_b[2-5]$/.test(n.material.name))cell=n;});
  const selected=cell as unknown as Mesh;expect(selected).not.toBeNull();
  const base=selected.position.y;
  runFrames(120,16);expect(selected.position.y).toBe(base); // title barrier still held

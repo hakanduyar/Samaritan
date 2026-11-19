@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import {afterEach,expect,it,vi} from 'vitest';
 import {Mesh} from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {createAmbientRails} from '../src/player/ambient';
+import {createAmbientRails,MAX_AMBIENT_RAILS} from '../src/player/ambient';
 import {createSceneRig} from '../src/player/sceneRig';
 
 afterEach(()=>vi.unstubAllGlobals());
@@ -17,18 +17,15 @@ it('actual GLB parser selects only bounded static cell primitives, preserving an
  const manifest=JSON.parse(readFileSync('public/assets/samaritan/manifest.json','utf8'));
  const names=manifest.anchors.flatMap((a:{screen:string;anchorNode:string})=>[a.screen,a.anchorNode]);
  const ambient=createAmbientRails(gltf.scene,gltf.animations,names);
- expect(ambient.selection).toHaveLength(14);
- expect(ambient.selection.slice(0,8).map(({name,period})=>({name,period}))).toEqual([
-   {name:'strip_044_b2',period:10},{name:'strip_072_b2',period:12},
-   {name:'strip_088_b2',period:14},{name:'strip_113_b2',period:16},
-   {name:'strip_141_b2',period:10},{name:'strip_065_b3',period:12},
-   {name:'strip_085_b3',period:14},{name:'strip_118_b3',period:16},
- ]);
- expect(ambient.selection.slice(8).map(({name})=>name)).toEqual([
-   'strip_030_b2','strip_064_b2','strip_096_b2','strip_039_b3','strip_101_b3','strip_142_b3',
- ]);
- for(const {low,high} of ambient.selection.slice(8)){
-   expect(low).toBeCloseTo(-.25);expect(high).toBeCloseTo(.25);
+ expect(ambient.selection.length).toBeGreaterThanOrEqual(80);
+ expect(ambient.selection.length).toBeLessThanOrEqual(MAX_AMBIENT_RAILS);
+ expect(new Set(ambient.selection.map(({mode})=>mode))).toEqual(new Set(['stepped','sine','slow-reel','fast-reel']));
+ const reels=ambient.selection.filter(({mode})=>mode.endsWith('reel'));
+ expect(reels.length).toBeGreaterThanOrEqual(36);expect(reels.length).toBeLessThanOrEqual(48);
+ for(const {name,low,high} of ambient.selection){
+   expect(names).not.toContain(name);
+   expect(low).toBeGreaterThanOrEqual(-.45);expect(low).toBeLessThanOrEqual(-.08);
+   expect(high).toBeLessThanOrEqual(.45);expect(high).toBeGreaterThanOrEqual(.08);
  }
  const positions=new Map<string,number[]>();let count=0;
  gltf.scene.traverse(n=>{positions.set(n.uuid,n.position.toArray());count++;});
@@ -54,5 +51,6 @@ it('actual GLB parser selects only bounded static cell primitives, preserving an
  ambient.reset();
  for(const {name} of ambient.selection) gltf.scene.getObjectByName(name)!.traverse(n=>expect(n.position.toArray()).toEqual(positions.get(n.uuid)));
  let afterCount=0;gltf.scene.traverse(()=>afterCount++);expect(afterCount).toBe(count);
+ ambient.dispose();ambient.dispose();
  rig.dispose();
 });

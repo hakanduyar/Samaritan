@@ -223,7 +223,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         opening.rig.seek(state.clipTime);opening.prepare();renderer.render(opening.scene,opening.rig.camera);
       }
     }else{
-      currentTime=rig.seek(currentTime);ambient?.apply();
+      currentTime=rig.seek(currentTime);ambient?.apply(ambientRunning()?rig.camera:undefined);
       // Only the interactive world is ever updated: never during the opening, and idle (released) under reduced motion or before interaction is ready.
       recordedFeed?.update(interactionReady&&!reducedMotion?currentTime:Number.NEGATIVE_INFINITY,rig.camera);
       renderer.render(scene,rig.camera);
@@ -573,7 +573,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     recordedFeed?.dispose();recordedFeed=null;
     rig?.dispose();
     rig = null;
-    ambient?.reset(); ambient = null;
+    ambient?.dispose(); ambient = null;
     if (scene) disposeObjectTree(scene);
     scene = null;
     if (renderer) {
@@ -694,11 +694,6 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       return;
     }
     marker.dataset.stage = "scene-contract";
-    if (world === "samaritan" && params.mode === "interactive" && manifest.clipName === "samaritan_interactive") {
-      ambient = createAmbientRails(scene, gltf.animations,
-        [manifest.focalScreenName, ...(manifest.anchors ?? []).flatMap((anchor) => [anchor.screen, anchor.anchorNode])]);
-      marker.dataset.ambientRails = String(ambient.selection.length);
-    }
     // Preserve authored status geometry in reference mode only.
     if (world === "samaritan" && params.mode === "interactive") {
       const statusPanel = scene.getObjectByName("status_rig");
@@ -720,6 +715,14 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         fail("error", "Scene violates contract", describe(error));
         return;
       }
+    }
+
+    // Created after any route extension so the animated blocker/continuation
+    // nodes and all ten focus/anchor names (base and extended) are protected.
+    if (world === "samaritan" && params.mode === "interactive" && (manifest.clipName === "samaritan_interactive" || manifest.clipName === extendedSamaritanAdmission.clipName)) {
+      ambient = createAmbientRails(scene, gltf.animations,
+        [manifest.focalScreenName, ...(manifest.anchors ?? []).flatMap((anchor) => [anchor.screen, anchor.anchorNode])]);
+      marker.dataset.ambientRails = String(ambient.selection.length);
     }
 
     try {
