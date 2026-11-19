@@ -1,8 +1,8 @@
 /**
  * Recorded-feed catalog: which public manifest anchor shows which recorded excerpt.
  * Hold windows are never stored here; they come from the public manifest anchors.
- * Anchor index 0 (screen_01, the opening pane) keeps its original still and has
- * no recorded media, so it is intentionally absent.
+ * Anchor index 0 (screen_01, the opening pane) has its own recorded excerpt
+ * (terminal-walk); the other anchors follow in route order.
  */
 export interface AnchorLike { screen: string; holdStart: number; holdEnd: number }
 
@@ -16,6 +16,7 @@ export interface RecordedCatalogEntry {
 }
 
 export const RECORDED_CATALOG: readonly RecordedCatalogEntry[] = [
+  { id: "terminal-walk", anchorIndex: 0, screen: "screen_01" },
   { id: "s00", anchorIndex: 1, screen: "screen_02" },
   { id: "aircargo", anchorIndex: 2, screen: "screen_03" },
   { id: "s01", anchorIndex: 3, screen: "screen_04" },

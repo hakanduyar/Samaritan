@@ -25,7 +25,7 @@ describe("extended recorded itinerary", () => {
   });
 
   it("maps the new recorded feeds only when the extended anchors exist", () => {
-    expect(resolveCatalog(admission.anchors).map((e) => e.id)).toEqual(["s00", "aircargo", "s01", "s02", "s03"]);
-    expect(resolveCatalog(extended.anchors).map((e) => e.id).slice(5)).toEqual(["harbor", "s04", "s05", "s06"]);
+    expect(resolveCatalog(admission.anchors).map((e) => e.id)).toEqual(["terminal-walk", "s00", "aircargo", "s01", "s02", "s03"]);
+    expect(resolveCatalog(extended.anchors).map((e) => e.id).slice(6)).toEqual(["harbor", "s04", "s05", "s06"]);
   });
 });

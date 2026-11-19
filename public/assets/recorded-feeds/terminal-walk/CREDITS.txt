@@ -1,0 +1,51 @@
+Recorded feed terminal-walk - credits, provenance and license
+============================================================
+
+Files in this directory
+  loop.mp4        20-second muted excerpt (H.264 crf 24, 960x540 square pixels, 30 fps)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored head marker track
+  loop.mp4 SHA-256:   ff627e7feaa5b63120c4291f20afbfef89d8ddf11ec53d48f6c3a6381cf36bdd
+  poster.jpg SHA-256: 460f809560a0ad5db3c4feb41b6e675cd1b7f7a4c917e38466b788ac7eb39aaf
+
+Source
+  MEVA (Multiview Extended Video with Activities) dataset, camera admin.G329
+  (interior stairwell and tile corridor), file:
+  https://mevadata-public-01.s3.amazonaws.com/drop-5-mevid/2018-05-18.14-30-00.14-35-00.admin.G329.r13.avi
+  Excerpt: source seconds 46 to 66 of that file. The scene is staged for the
+  dataset (research actor).
+  Source object: S3 ETag 9d5ca98a820e7ac627f35af5f897876c-18 (multipart upload,
+  not a content hash), length 148741780 bytes. The SHA-256 of the full source
+  file is not recorded: the excerpt was read by HTTP range seeking rather than
+  downloading the whole 148 MB file.
+
+Attribution
+  Video: MEVA, Kitware, Inc. / IARPA. https://mevadata.org/
+
+License
+  The source video is offered under the Creative Commons Attribution 4.0
+  International license (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+  Dataset license statement: https://mevadata.org/resources/MEVA-data-license.txt
+  Provided you give appropriate credit, link to the license and indicate if
+  changes were made, you may share and adapt the material. This file is a
+  summary, not the license.
+
+Changes made (derivative material)
+  - Cut a 20-second excerpt in native time, forward only (no reverse, no
+    retiming, no crop, no crossfade).
+  - Removed audio and container metadata; re-encoded as H.264 MP4, 960x540,
+    square pixels, 30 fps, with timestamps starting at 0.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: a hand-authored head
+    bounding box (normalized, top-left origin) with explicit invisible keys
+    before entry, during stair-beam occlusion and after exit. It is not output
+    of live inference and not an identification of any person. It is offered
+    under CC BY 4.0.
+
+Notes
+  - Ordinary recorded replay shown inside a fictional interface. It is not a
+    live camera, and the loop point is not guaranteed to be seamless.
+  - Not television footage; not affiliated with or endorsed by MEVA, Kitware,
+    IARPA or the original production.
+  - License scope: loop.mp4 and poster.jpg retain CC BY 4.0. The project's MIT
+    license does not apply to this directory; the application code remains MIT.

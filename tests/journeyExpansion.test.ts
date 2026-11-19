@@ -38,6 +38,6 @@ it('lengthens travel while preserving focus composition, hold timing and all ten
  const extended=extendRecordedRoute(candidate.scene,candidate.animations,manifest,{continuationCopies:false});
  expect(extended.anchors).toHaveLength(10);
  expect(extended.anchors!.slice(0,6)).toEqual(manifest.anchors);
- expect(resolveCatalog(extended.anchors!).map(entry=>entry.id)).toEqual(['s00','aircargo','s01','s02','s03','harbor','s04','s05','s06']);
+ expect(resolveCatalog(extended.anchors!).map(entry=>entry.id)).toEqual(['terminal-walk','s00','aircargo','s01','s02','s03','harbor','s04','s05','s06']);
  original.dispose();
 });
