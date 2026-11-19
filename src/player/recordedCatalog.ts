@@ -21,6 +21,11 @@ export const RECORDED_CATALOG: readonly RecordedCatalogEntry[] = [
   { id: "s01", anchorIndex: 3, screen: "screen_04" },
   { id: "s02", anchorIndex: 4, screen: "screen_05" },
   { id: "s03", anchorIndex: 5, screen: "focal_screen" },
+  // Opt-in extended itinerary only (?itinerary=extended); skipped when the manifest has six anchors.
+  { id: "harbor", anchorIndex: 6, screen: "extension_screen_07" },
+  { id: "s04", anchorIndex: 7, screen: "extension_screen_08" },
+  { id: "s05", anchorIndex: 8, screen: "extension_screen_09" },
+  { id: "s06", anchorIndex: 9, screen: "extension_screen_10" },
 ];
 
 export interface ResolvedRecordedEntry extends RecordedCatalogEntry {

@@ -23,6 +23,7 @@ import { createAmbientRails } from "./ambient";
 import { createRecordedFeed, type RecordedFeedController } from "./recordedFeed";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
+import { createExtendedHoldMap, extendRecordedRoute, extendedSamaritanAdmission } from "./extendRecordedRoute";
 import { createSamaritanPhoneFraming, isPhoneViewport } from "./samaritanFraming";
 import { advanceTouchTrip, createTouchTrip, hasTouchCapability, isTouchTap, swipeDirection, touchStop, type TouchTrip } from "./touchNavigation";
 
@@ -629,12 +630,16 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     }
     manifest = validation.manifest;
     manualMap = navigationMap(manifest, exact);
+    // Opt-in extended itinerary: only after the exact base signature was admitted by navigationMap.
+    const search = new URLSearchParams(win.location.search);
+    const extendItinerary = world === "samaritan" && params.mode === "interactive" && !exact && !reducedMotion
+      && search.get("recordedFeed") === "1" && search.get("itinerary") === "extended" && manualMap.focusHolds.length > 0;
     marker.dataset.stage = "scene-assets";
-    if (params.requestedTime !== null && params.requestedTime > manifest.durationSeconds) {
+    if (params.requestedTime !== null && params.requestedTime > (extendItinerary ? extendedSamaritanAdmission.durationSeconds : manifest.durationSeconds)) {
       fail(
         "error",
         "Reference time outside clip",
-        `t=${params.requestedTime} exceeds durationSeconds ${manifest.durationSeconds}`,
+        `t=${params.requestedTime} exceeds durationSeconds ${extendItinerary ? extendedSamaritanAdmission.durationSeconds : manifest.durationSeconds}`,
       );
       return;
     }
@@ -704,6 +709,17 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (failedResources.length > 0) {
       fail("error", "Scene resources failed to load", failedResources.join(", "));
       return;
+    }
+
+    if (extendItinerary) {
+      try {
+        manifest = extendRecordedRoute(gltf.scene, gltf.animations, manifest);
+        if (manifest.durationSeconds !== extendedSamaritanAdmission.durationSeconds) throw new Error("Recorded route extension was not applied");
+        manualMap = createExtendedHoldMap();
+      } catch (error) {
+        fail("error", "Scene violates contract", describe(error));
+        return;
+      }
     }
 
     try {

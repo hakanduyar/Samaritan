@@ -1,0 +1,38 @@
+Recorded feed harbor - credits, provenance and license
+=====================================================
+
+Files in this directory
+  loop.mp4        24-second muted excerpt (H.264, 960x540, 24 fps, pillarboxed 4:3 view)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker track (one neutral vehicle outline)
+  loop.mp4 SHA-256: 8d1114ee6a64a808ff22ad124be8c81e3a85d50caca39e4a500c815112b17975
+
+Source
+  NASA Scientific Visualization Studio, harbor cargo-loading footage:
+  https://svs.gsfc.nasa.gov/13974/
+  Excerpt: source seconds 0 to 24 (elevated fixed GoPro berth view).
+
+Attribution
+  Footage: NASA's Goddard Space Flight Center (Michael McClare, Sophia Roberts,
+  Michael P. Menzel).
+
+License
+  NASA SVS content is public domain unless otherwise noted; no exception is
+  indicated for this footage. Policy: https://svs.gsfc.nasa.gov/help/
+  NASA asks for credit, as given above. This is not an endorsement by NASA, and
+  the footage is not relicensed as MIT. Project-authored tracking.json is
+  offered under CC BY 4.0.
+
+Changes made (derivative material)
+  - Trimmed a native forward-time segment; resized to 960x540.
+  - Removed audio; re-encoded as H.264 MP4.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: hand-annotated normalized
+    bounds (top-left origin) of one watercraft, not output of live inference.
+
+Notes
+  - Time-lapse recording, not real-time camera footage. Finite recorded replay
+    shown inside a fictional interface; it is not a live camera and the restart
+    is a visible reset, not a seamless loop.
+  - The project's MIT license does not apply to this directory; the application
+    code remains MIT.
