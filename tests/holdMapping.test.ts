@@ -49,3 +49,15 @@ it('captures only first focus entry in either direction, never rests or fresh tr
  expect(focusEntry(0,.9,holds)).toBeNull();
  expect(withinFocus(3,holds)).toBe(true);
 });
+it('speeds only free travel while preserving holds, input distance and inverse mapping',()=>{
+ const holds=[{holdStart:3,holdEnd:6},{holdStart:28,holdEnd:31}];
+ const base=createHoldMap(40,holds), fast=createHoldMap(40,holds,1.5);
+ expect(fast.nominalDuration).toBeCloseTo(base.duration,10);
+ expect(fast.duration).toBeLessThan(base.duration);
+ for(const h of holds)expect(fast.toNavigation(h.holdEnd)-fast.toNavigation(h.holdStart)).toBeCloseTo(.2,10);
+ const ratio=(fast.toNavigation(28)-fast.toNavigation(6))/22;
+ expect(ratio).toBeGreaterThan(1/1.5); expect(ratio).toBeLessThan(.72);
+ let previous=-1;
+ for(let t=0;t<=40;t+=.037){const n=fast.toNavigation(t);expect(n).toBeGreaterThan(previous);expect(fast.toClip(n)).toBeCloseTo(t,9);previous=n;}
+ expect(fast.toClip(fast.duration)).toBe(40);
+});

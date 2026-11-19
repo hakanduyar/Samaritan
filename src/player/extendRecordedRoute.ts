@@ -5,18 +5,11 @@ import {
 import type { SceneManifest } from "../contract/manifest";
 import admission from "./holdAdmission.json";
 import rests from "./holdRestAdmission.json";
-import { createHoldMap, type Hold } from "./holdMapping";
+import { createHoldMap, TRAVEL_SPEEDUP, type Hold } from "./holdMapping";
 
-type Offset = { x: number; y: number };
-type LegKind = "yx" | "forward-x";
-const ease = (value: number) => { const t = Math.max(0, Math.min(1, value)); return t * t * t * (t * (t * 6 - 15) + 10); };
-/** Small self-contained leg easing: sideways in two phases, or forward first and then sideways. */
-function journeyLeg(progress: number, from: Offset, to: Offset, kind: LegKind) {
-  const p = Math.max(0, Math.min(1, progress));
-  const first = ease(p / .5), second = ease((p - .5) / .5), afterForward = ease((p - .58) / .42);
-  if (kind === "yx") return { x: from.x + (to.x - from.x) * second, y: from.y + (to.y - from.y) * first, forward: 0 };
-  return { x: from.x + (to.x - from.x) * afterForward, y: from.y + (to.y - from.y) * afterForward, forward: Math.min(1, p / .58) };
-}
+import { journeyLeg, type LegKind } from "./journeyExpansion";
+/** Extension legs: lateral+vertical, drifting forward, side-pass, forward with vertical drift. */
+const EXTENSION_LEGS: LegKind[] = ["xy", "forward-x", "pass", "forward-y"];
 
 /** Last extension build: counts for review/diagnostics only. */
 export const budget = { hiddenForeground: 0, continuationNodes: 0 };
@@ -46,7 +39,7 @@ export const extendedSamaritanAdmission = {
 /** Explicit navigation map for the extended route. Call only after the exact base map was admitted. */
 export function createExtendedHoldMap() {
   const end = extendedSamaritanAdmission.durationSeconds;
-  const map = createHoldMap(end, [rests.opening, ...extendedSamaritanAdmission.anchors, { holdStart: end - END_REST_SECONDS, holdEnd: end }]);
+  const map = createHoldMap(end, [rests.opening, ...extendedSamaritanAdmission.anchors, { holdStart: end - END_REST_SECONDS, holdEnd: end }], TRAVEL_SPEEDUP);
   return { ...map, focusHolds: extendedSamaritanAdmission.anchors as readonly Hold[] };
 }
 
@@ -104,7 +97,7 @@ export function extendRecordedRoute(
       const progress = (frame.time - fromTime) / (toTime - fromTime);
       const origin=index===0?{x:end[0]!,y:end[1]!,z:end[2]!}:destinations[index-1]!;
       const destination=destinations[index]!;
-      const leg=journeyLeg(progress,origin,destination,index===0?'yx':'forward-x');
+      const leg=journeyLeg(progress,origin,destination,EXTENSION_LEGS[index]!);
       const p=leg.forward,easedDepth=p*p*p*(p*(p*6-15)+10);
       extension.push({
         time: start + progress * TRAVEL_SECONDS,
