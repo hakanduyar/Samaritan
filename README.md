@@ -36,12 +36,13 @@ pnpm start
 
 ## Controls
 
-- Wheel or touch drag: move forward/backward along the authored route.
+- Wheel: continuous forward/backward movement along the authored route.
+- Touch: one vertical swipe moves one focus stop forward (swipe up) or back (swipe down), in portrait and landscape. Tapping during the trip cancels it. In `mode=reference` (exact mode), touch drag moves along the route as before.
 - Arrow/Page keys: navigate; Space or K: toggle playback.
 - Home/End: navigate to the route boundaries.
 - `/samaritan?mode=reference&t=10&qa=1`: exact authored-time inspection with diagnostic controls.
 
-The opening completes before interactive navigation begins. The authored route lasts approximately 80.65 seconds at 1× playback. Manual navigation uses bounded acceleration and compressed stationary holds; playback retains the full authored timing. A small, bounded subset of distant screen cells moves independently while idle; focused screens remain stable.
+The opening completes before interactive navigation begins. The authored route lasts approximately 107.12 seconds at 1× playback. Manual navigation uses bounded acceleration and compressed stationary holds; playback retains the full authored timing. A small, bounded subset of distant screen cells moves independently while idle; focused screens remain stable.
 
 ## Project status
 

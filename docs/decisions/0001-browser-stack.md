@@ -20,7 +20,9 @@ Vite with React, or Vite with plain TypeScript and DOM controls, is a credible s
 
 ## Local data and alternatives
 
-Scene and manifest are same-origin assets. No application database, account service, telemetry service or domain backend is configured. The documented production workflow still uses Next's server; static scene data does **not** mean the repository is configured as a static export or an installable offline app.
+Scene and manifest are same-origin assets. No application database, account service, telemetry service or domain backend is configured. When this decision was recorded, the documented production workflow used only Next's server, and static scene data did not by itself mean the repository was configured as a static export or an installable offline app.
+
+**Update (2026-11-19):** The local Next.js server workflow remains supported. An optional static-pages build is now also supported: setting `STATIC_EXPORT=1` (with `NEXT_PUBLIC_BASE_PATH` for a project prefix) makes Next emit a static export. This does not change the host decision above, is not an architecture migration, and does not make the project an installable offline app. See [Static demo deployment](../STATIC-DEMO.md) for the build, verification and manual-deploy steps.
 
 Do not add Rust/WASM merely because the view is graphical: GPU rendering is already delegated through Three.js/WebGL, and WASM does not automatically reduce draw calls or texture cost. Consider a small WASM module only after profiling identifies a substantial CPU-bound algorithm and a prototype demonstrates benefit after transfer, initialization and maintenance costs.
 

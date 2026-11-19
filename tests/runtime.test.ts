@@ -598,6 +598,40 @@ it('integrates actual selected rails with intro release, hidden pause, reverse s
  expect(m.handle.controller.getSnapshot()?.time).toBe(0);
 });
 
+it('touch swipe takes one focus stop and interrupted gestures cancel the trip',async()=>{
+ const world='samaritan';
+ const nativeFetch=globalThis.fetch;
+ const manifest=JSON.parse(readFileSync('public/assets/'+world+'/manifest.json','utf8'));
+ const scenePath='/assets/'+world+'/'+(manifest.sceneUrl.startsWith('./') ? manifest.sceneUrl.slice(2) : manifest.sceneUrl);
+ const bytes=readFileSync('public'+scenePath);
+ vi.stubGlobal('self',globalThis);vi.stubGlobal('URL',NodeURL);vi.stubGlobal('Blob',NodeBlob);
+ vi.stubGlobal('createImageBitmap',async()=>({width:1,height:1,close(){}}));
+ installEnvironment({['/assets/'+world+'/manifest.json']:()=>Response.json(manifest),[scenePath]:()=>new Response(bytes)});
+ const routedFetch=globalThis.fetch;
+ vi.stubGlobal('fetch',(input:RequestInfo|URL,init?:RequestInit)=>String(input).startsWith('blob:')?nativeFetch(input,init):routedFetch(input,init));
+ Object.defineProperty(window.navigator,'maxTouchPoints',{value:1,configurable:true});
+ try{
+  const m=track(mount({},world));
+  await until(()=>m.marker.dataset.state==='ready','admitted route ready');
+  const stop=manifest.anchors[0].holdStart;
+  const touch=(type:string,y:number)=>{const e=new Event(type);Object.assign(e,{pointerType:'touch',pointerId:1,isPrimary:true,clientX:0,clientY:y});m.host.dispatchEvent(e);};
+  const snap=()=>m.handle.controller.getSnapshot()!;
+  touch('pointerdown',500);touch('pointerup',300);
+  expect(snap().targetTime).toBe(stop);
+  runFrames(30,16);
+  expect(snap().time).toBeGreaterThan(0);expect(snap().time).toBeLessThan(stop);expect(snap().settled).toBe(false);
+  // A normal pointerup is followed by lostpointercapture; the trip must keep running.
+  m.host.dispatchEvent(Object.assign(new Event('lostpointercapture'),{pointerId:1}));
+  runFrames(5,16);expect(snap().settled).toBe(false);
+  touch('pointerdown',500);touch('pointercancel',500);
+  expect(snap().settled).toBe(true);expect(snap().targetTime).toBe(snap().time);
+  const stopped=snap().time;runFrames(60,16);expect(snap().time).toBe(stopped);
+  touch('pointerdown',500);touch('pointerup',300);runFrames(30,16);expect(snap().settled).toBe(false);
+  touch('pointerdown',500);m.host.dispatchEvent(Object.assign(new Event('lostpointercapture'),{pointerId:1}));
+  expect(snap().settled).toBe(true);expect(snap().targetTime).toBe(snap().time);
+ }finally{delete (window.navigator as unknown as {maxTouchPoints?:number}).maxTouchPoints;}
+});
+
 it('maps admitted manual holds while playback and exact seeks retain authored time',async()=>{
  const world='samaritan';
  const nativeFetch=globalThis.fetch;
