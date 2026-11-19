@@ -25,6 +25,7 @@ import { makeSamaritanPanesOpaque } from "./samaritanOpacity";
 import { createRecordedFeed, type RecordedFeedController } from "./recordedFeed";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
+import { expandJourney } from "./journeyExpansion";
 import { createExtendedHoldMap, extendRecordedRoute, extendedSamaritanAdmission } from "./extendRecordedRoute";
 import { createSamaritanPhoneFraming, isPhoneViewport } from "./samaritanFraming";
 import { advanceTouchTrip, createTouchTrip, hasTouchCapability, isTouchTap, swipeDirection, touchStop, type TouchTrip } from "./touchNavigation";
@@ -750,6 +751,17 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     if (failedResources.length > 0) {
       fail("error", "Scene resources failed to load", failedResources.join(", "));
       return;
+    }
+
+    // Directional journey: only the strictly admitted six-stop manual scene, before the four-stop
+    // extension and before every controller that reads final positions. No silent fallback.
+    if (world === "samaritan" && params.mode === "interactive" && !exact && manualMap.focusHolds.length > 0) {
+      try {
+        expandJourney(gltf.scene, gltf.animations, manifest);
+      } catch (error) {
+        fail("error", "Scene violates contract", describe(error));
+        return;
+      }
     }
 
     if (extendItinerary) {
