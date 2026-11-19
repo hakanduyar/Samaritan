@@ -9,6 +9,7 @@ import s00 from "../public/assets/recorded-feeds/s00/tracking.json";
 import s01 from "../public/assets/recorded-feeds/s01/tracking.json";
 import s02 from "../public/assets/recorded-feeds/s02/tracking.json";
 import s03 from "../public/assets/recorded-feeds/s03/tracking.json";
+import s06 from "../public/assets/recorded-feeds/s06/tracking.json";
 import aircargo from "../public/assets/recorded-feeds/aircargo/tracking.json";
 
 describe("recorded feed catalog", () => {
@@ -55,7 +56,7 @@ describe("recorded tracking", () => {
   });
 
   it("parses every shipped track file and types aircargo as a vehicle", () => {
-    for (const data of [terminalWalk, s00, s01, s02, s03, aircargo]) expect(() => parseRecordedTracking(data)).not.toThrow();
+    for (const data of [terminalWalk, s00, s01, s02, s03, s06, aircargo]) expect(() => parseRecordedTracking(data)).not.toThrow();
     expect(aircargo.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
     for (const data of [terminalWalk, s00, s01, s02, s03]) expect(data.tracks.every((t) => t.entityKind === "person")).toBe(true);
   });
