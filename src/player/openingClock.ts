@@ -15,8 +15,10 @@ export function openingTravelTime(seconds:number,duration:number,end:number,init
 }
 /** Additional physical distance, joining the authored approach with zero residual velocity. */
 export function openingDistanceOffset(clipTime:number,approachStart:number) {
- const progress=Math.max(0,Math.min(1,clipTime/approachStart));
- return 32*(1-progress*progress*(3-2*progress));
+ // Raw progress is warped by p^1.2 (zero slope at 0, finite at 1) so the extra forward speed peaks later
+ // and keeps building alongside the accelerating clock; smoothstep still joins at zero position and velocity.
+ const progress=Math.max(0,Math.min(1,clipTime/approachStart))**1.2;
+ return 48*(1-progress*progress*(3-2*progress));
 }
 export function createOpeningClock(meta:OpeningContract,travelRate=1,initialLoading=0,travelSeconds?:number){
  if(!Number.isFinite(travelRate)||travelRate<=0)throw Error('Invalid opening travel rate');
