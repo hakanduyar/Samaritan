@@ -10,8 +10,16 @@ export interface TrackingTrack { id: string; role?: string; entityKind?: EntityK
  * Optional authored foreground mask: a normalized polygon (top-left origin)
  * covering part of the frame during [start, end]. Marker pixels inside it are
  * clipped; video pixels are never touched. Scoped to trackIds when given.
+ * A mask is either static (`polygon`) or animated (`keyframes`: same-length
+ * polygons at strictly increasing times, vertices interpolated linearly and
+ * held at the first/last pose outside the keyframe span).
  */
-export interface OcclusionMask { id?: string; trackIds?: string[]; start: number; end: number; polygon: Array<[number, number]> }
+export type OcclusionPolygon = Array<[number, number]>;
+export interface OcclusionKeyframe { t: number; polygon: OcclusionPolygon }
+interface OcclusionMaskBase { id?: string; trackIds?: string[]; start: number; end: number }
+export interface StaticOcclusionMask extends OcclusionMaskBase { polygon: OcclusionPolygon; keyframes?: undefined }
+export interface AnimatedOcclusionMask extends OcclusionMaskBase { keyframes: OcclusionKeyframe[]; polygon?: undefined }
+export type OcclusionMask = StaticOcclusionMask | AnimatedOcclusionMask;
 export interface RecordedTracking { duration: number; tracks: TrackingTrack[]; occluders?: OcclusionMask[] }
 /**
  * Visual style only. Fan-reference-inspired display variation, authored per
@@ -61,17 +69,56 @@ export function parseRecordedTracking(value: unknown): RecordedTracking {
       const ok = m && Number.isFinite(m.start) && Number.isFinite(m.end) && m.start >= 0 && m.end > m.start && m.end <= data.duration
         && (m.id === undefined || typeof m.id === "string")
         && (m.trackIds === undefined || (Array.isArray(m.trackIds) && m.trackIds.every((id) => typeof id === "string" && ids.has(id))))
-        && Array.isArray(m.polygon) && m.polygon.length >= 3
-        && m.polygon.every((pt) => Array.isArray(pt) && pt.length === 2 && pt.every((c) => Number.isFinite(c) && c >= 0 && c <= 1));
+        && (m.keyframes === undefined ? validPolygon(m.polygon) : m.polygon === undefined && validOcclusionKeyframes(m.keyframes, m.start, m.end));
       if (!ok) throw new Error("Invalid recorded occluder");
     }
   }
   return data;
 }
 
-/** Masks active at a time (inclusive window), sampled from the same video time as the heads. */
-export function activeOcclusionMasks(data: RecordedTracking, time: number): OcclusionMask[] {
-  return (data.occluders ?? []).filter((m) => time >= m.start && time <= m.end);
+function validPolygon(polygon: unknown): polygon is OcclusionPolygon {
+  return Array.isArray(polygon) && polygon.length >= 3
+    && polygon.every((pt) => Array.isArray(pt) && pt.length === 2 && pt.every((c) => Number.isFinite(c) && c >= 0 && c <= 1));
+}
+
+function validOcclusionKeyframes(keyframes: unknown, start: number, end: number): boolean {
+  if (!Array.isArray(keyframes) || keyframes.length < 2) return false;
+  let previous = -Infinity;
+  const count = (keyframes[0] as OcclusionKeyframe | undefined)?.polygon?.length;
+  return keyframes.every((k: OcclusionKeyframe) => {
+    const ok = !!k && Number.isFinite(k.t) && k.t > previous && k.t >= start && k.t <= end
+      && validPolygon(k.polygon) && k.polygon.length === count;
+    if (ok) previous = k.t;
+    return ok;
+  });
+}
+
+function interpolatePolygon(keyframes: readonly OcclusionKeyframe[], time: number): OcclusionPolygon {
+  const first = keyframes[0]!;
+  const last = keyframes[keyframes.length - 1]!;
+  if (time <= first.t) return first.polygon;
+  if (time >= last.t) return last.polygon;
+  let i = 1;
+  while (keyframes[i]!.t < time) i++;
+  const a = keyframes[i - 1]!;
+  const b = keyframes[i]!;
+  const mix = (time - a.t) / (b.t - a.t);
+  return a.polygon.map(([ax, ay], v): [number, number] => [ax + (b.polygon[v]![0] - ax) * mix, ay + (b.polygon[v]![1] - ay) * mix]);
+}
+
+/**
+ * Masks active at a time (inclusive window), sampled from the same video time as
+ * the heads. Static masks are returned unchanged; animated masks are resolved to
+ * the polygon interpolated at `time`.
+ */
+export function activeOcclusionMasks(data: RecordedTracking, time: number): StaticOcclusionMask[] {
+  const active: StaticOcclusionMask[] = [];
+  for (const m of data.occluders ?? []) {
+    if (!(time >= m.start && time <= m.end)) continue;
+    if (m.keyframes === undefined) active.push(m);
+    else active.push({ id: m.id, trackIds: m.trackIds, start: m.start, end: m.end, polygon: interpolatePolygon(m.keyframes, time) });
+  }
+  return active;
 }
 
 /**
@@ -302,7 +349,7 @@ export function drawObjectOutline(ctx: CanvasRenderingContext2D, width: number, 
   ctx.restore();
 }
 
-export function drawMarker(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head, masks: readonly OcclusionMask[] = []): void {
+export function drawMarker(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head, masks: readonly StaticOcclusionMask[] = []): void {
   const scoped = masks.filter((m) => !m.trackIds || (entity.trackId !== undefined && m.trackIds.includes(entity.trackId)));
   if (scoped.length === 0) { drawMarkerShape(ctx, width, height, entity); return; }
   // Marker only: each mask clips to the outside of its polygon (evenodd). Video is already painted.
