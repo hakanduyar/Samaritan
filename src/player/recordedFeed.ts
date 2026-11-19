@@ -22,7 +22,7 @@ import {
   type AnchorLike,
   type ResolvedRecordedEntry,
 } from "./recordedCatalog";
-import { drawMarker, parseRecordedTracking, sampleHeads, type RecordedTracking } from "./recordedTracking";
+import { activeOcclusionMasks, drawMarker, parseRecordedTracking, sampleHeads, type RecordedTracking } from "./recordedTracking";
 
 /**
  * Opt-in recorded feeds for the catalog screens. Hold windows come from the
@@ -120,7 +120,10 @@ export function createRecordedFeed(
           sized = true;
         }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        if (tracking) for (const head of sampleHeads(tracking, time)) drawMarker(context, canvas.width, canvas.height, head);
+        if (tracking) {
+          const masks = activeOcclusionMasks(tracking, time);
+          for (const head of sampleHeads(tracking, time)) drawMarker(context, canvas.width, canvas.height, head, masks);
+        }
         hasFrame = true;
         texture.needsUpdate = true;
         if (active) mesh.material = material;

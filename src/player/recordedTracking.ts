@@ -6,13 +6,19 @@
 export type EntityKind = "person" | "vehicle";
 export interface TrackKeyframe { t: number; x: number; y: number; w: number; h: number; visible: boolean }
 export interface TrackingTrack { id: string; role?: string; entityKind?: EntityKind; keyframes: TrackKeyframe[] }
-export interface RecordedTracking { duration: number; tracks: TrackingTrack[] }
+/**
+ * Optional authored foreground mask: a normalized polygon (top-left origin)
+ * covering part of the frame during [start, end]. Marker pixels inside it are
+ * clipped; video pixels are never touched. Scoped to trackIds when given.
+ */
+export interface OcclusionMask { id?: string; trackIds?: string[]; start: number; end: number; polygon: Array<[number, number]> }
+export interface RecordedTracking { duration: number; tracks: TrackingTrack[]; occluders?: OcclusionMask[] }
 /**
  * Visual style only. Fan-reference-inspired display variation, authored per
  * track; it is not a taxonomy and carries no meaning about the subject.
  */
 export type MarkerStyle = "open-triangle" | "circle-frame" | "circle-red-triangle";
-export interface Head { x: number; y: number; w: number; h: number; kind: EntityKind; style?: MarkerStyle }
+export interface Head { trackId?: string; x: number; y: number; w: number; h: number; kind: EntityKind; style?: MarkerStyle }
 
 const BOUNDS_EPSILON = 1e-5;
 const STYLE_CYCLE: readonly MarkerStyle[] = ["circle-frame", "circle-red-triangle", "open-triangle"];
@@ -49,7 +55,23 @@ export function parseRecordedTracking(value: unknown): RecordedTracking {
       previous = f.t;
     }
   }
+  if (data.occluders !== undefined) {
+    if (!Array.isArray(data.occluders)) throw new Error("Invalid recorded occluders");
+    for (const m of data.occluders) {
+      const ok = m && Number.isFinite(m.start) && Number.isFinite(m.end) && m.start >= 0 && m.end > m.start && m.end <= data.duration
+        && (m.id === undefined || typeof m.id === "string")
+        && (m.trackIds === undefined || (Array.isArray(m.trackIds) && m.trackIds.every((id) => typeof id === "string" && ids.has(id))))
+        && Array.isArray(m.polygon) && m.polygon.length >= 3
+        && m.polygon.every((pt) => Array.isArray(pt) && pt.length === 2 && pt.every((c) => Number.isFinite(c) && c >= 0 && c <= 1));
+      if (!ok) throw new Error("Invalid recorded occluder");
+    }
+  }
   return data;
+}
+
+/** Masks active at a time (inclusive window), sampled from the same video time as the heads. */
+export function activeOcclusionMasks(data: RecordedTracking, time: number): OcclusionMask[] {
+  return (data.occluders ?? []).filter((m) => time >= m.start && time <= m.end);
 }
 
 /**
@@ -74,11 +96,12 @@ export function sampleHeads(data: RecordedTracking, time: number): Head[] {
       if (frame.t >= time) { b = frame; break; }
     }
     if (!a.visible) continue;
-    if (b.t === a.t) { heads.push({ x: a.x, y: a.y, w: a.w, h: a.h, kind, style }); continue; }
+    if (b.t === a.t) { heads.push({ trackId: id, x: a.x, y: a.y, w: a.w, h: a.h, kind, style }); continue; }
     if (!b.visible) continue;
     const mix = (time - a.t) / (b.t - a.t);
     heads.push({
-      x: a.x + (b.x - a.x) * mix,
+      trackId: id,
+      x: a.x +(b.x - a.x) * mix,
       y: a.y + (b.y - a.y) * mix,
       w: a.w + (b.w - a.w) * mix,
       h: a.h + (b.h - a.h) * mix,
@@ -224,7 +247,23 @@ export function drawObjectOutline(ctx: CanvasRenderingContext2D, width: number, 
   ctx.restore();
 }
 
-export function drawMarker(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head): void {
+export function drawMarker(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head, masks: readonly OcclusionMask[] = []): void {
+  const scoped = masks.filter((m) => !m.trackIds || (entity.trackId !== undefined && m.trackIds.includes(entity.trackId)));
+  if (scoped.length === 0) { drawMarkerShape(ctx, width, height, entity); return; }
+  // Marker only: each mask clips to the outside of its polygon (evenodd). Video is already painted.
+  ctx.save();
+  for (const m of scoped) {
+    ctx.beginPath();
+    ctx.rect(0, 0, width, height);
+    m.polygon.forEach(([px, py], i) => (i ? ctx.lineTo(px * width, py * height) : ctx.moveTo(px * width, py * height)));
+    ctx.closePath();
+    ctx.clip("evenodd");
+  }
+  drawMarkerShape(ctx, width, height, entity);
+  ctx.restore();
+}
+
+function drawMarkerShape(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head): void {
   if (entity.kind === "vehicle") drawObjectOutline(ctx, width, height, entity);
   else if (entity.style === "circle-frame") drawCircleMarker(ctx, width, height, entity, false);
   else if (entity.style === "circle-red-triangle") drawCircleMarker(ctx, width, height, entity, true);
