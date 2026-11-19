@@ -28,7 +28,6 @@ export interface RecordedTracking { duration: number; tracks: TrackingTrack[]; o
 export type MarkerStyle = "open-triangle" | "circle-frame" | "circle-red-triangle";
 export interface Head { trackId?: string; x: number; y: number; w: number; h: number; kind: EntityKind; style?: MarkerStyle }
 
-const BOUNDS_EPSILON = 1e-5;
 const STYLE_CYCLE: readonly MarkerStyle[] = ["circle-frame", "circle-red-triangle", "open-triangle"];
 
 /** Stable authored style from the track id's trailing number (subject-01, -02, ...); no per-frame state. */
@@ -56,9 +55,9 @@ export function parseRecordedTracking(value: unknown): RecordedTracking {
       const finite = f && [f.t, f.x, f.y, f.w, f.h].every(Number.isFinite);
       if (
         !finite || typeof f.visible !== "boolean" || f.t < 0 || f.t > data.duration || f.t <= previous
-        || f.x < 0 || f.y < 0 || f.w < 0 || f.h < 0
-        || (f.visible && (f.w === 0 || f.h === 0))
-        || f.x + f.w > 1 + BOUNDS_EPSILON || f.y + f.h > 1 + BOUNDS_EPSILON
+        || f.w < 0 || f.h < 0 || f.w > 1 || f.h > 1
+        || f.x < -1 || f.y < -1 || f.x > 2 || f.y > 2
+        || (f.visible && (f.w === 0 || f.h === 0 || f.x + f.w <= 0 || f.y + f.h <= 0 || f.x >= 1 || f.y >= 1))
       ) throw new Error("Invalid recorded keyframe");
       previous = f.t;
     }
