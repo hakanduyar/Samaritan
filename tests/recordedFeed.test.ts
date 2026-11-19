@@ -4,6 +4,7 @@ import manifest from "../public/assets/samaritan/manifest.json";
 import { MAX_DECODERS, resolveCatalog, selectPrepared } from "../src/player/recordedCatalog";
 import { headTriangle, parseRecordedTracking, sampleHeads, type Head } from "../src/player/recordedTracking";
 
+import terminalWalk from "../public/assets/recorded-feeds/terminal-walk/tracking.json";
 import s00 from "../public/assets/recorded-feeds/s00/tracking.json";
 import s01 from "../public/assets/recorded-feeds/s01/tracking.json";
 import s02 from "../public/assets/recorded-feeds/s02/tracking.json";
@@ -13,18 +14,18 @@ import aircargo from "../public/assets/recorded-feeds/aircargo/tracking.json";
 describe("recorded feed catalog", () => {
   const anchors = manifest.anchors;
 
-  it("maps five media onto the six anchors and leaves anchor 0 as the original still", () => {
+  it("maps six recorded feeds onto all six anchors without changing their order", () => {
     const entries = resolveCatalog(anchors);
-    expect(entries.map((e) => e.anchorIndex)).toEqual([1, 2, 3, 4, 5]);
-    expect(entries.map((e) => e.id)).toEqual(["s00", "aircargo", "s01", "s02", "s03"]);
-    expect(entries.map((e) => e.screen)).toEqual(["screen_02", "screen_03", "screen_04", "screen_05", "focal_screen"]);
-    expect(entries.find((e) => e.anchorIndex === 0)).toBeUndefined();
+    expect(entries.map((e) => e.anchorIndex)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(entries.map((e) => e.id)).toEqual(["terminal-walk", "s00", "aircargo", "s01", "s02", "s03"]);
+    expect(entries.map((e) => e.screen)).toEqual(["screen_01", "screen_02", "screen_03", "screen_04", "screen_05", "focal_screen"]);
+    expect(entries[0]).toMatchObject({id:"terminal-walk",screen:"screen_01"});
     entries.forEach((e) => expect(e.holdStart).toBe(anchors[e.anchorIndex]!.holdStart));
   });
 
   it("skips entries whose anchor is missing or names a different screen", () => {
     expect(resolveCatalog(undefined)).toEqual([]);
-    expect(resolveCatalog(anchors.slice(0, 2)).map((e) => e.id)).toEqual(["s00"]);
+    expect(resolveCatalog(anchors.slice(0, 2)).map((e) => e.id)).toEqual(["terminal-walk", "s00"]);
     const swapped = anchors.map((a, i) => (i === 2 ? { ...a, screen: "other" } : a));
     expect(resolveCatalog(swapped).map((e) => e.id)).not.toContain("aircargo");
   });
@@ -34,15 +35,15 @@ describe("recorded feed catalog", () => {
     for (let t = 0; t <= 110; t += 0.25) expect(selectPrepared(entries, t).length).toBeLessThanOrEqual(MAX_DECODERS);
     expect(selectPrepared(entries, anchors[3]!.holdStart + 0.5)[0]?.id).toBe("s01");
     expect(selectPrepared(entries, 1000)).toEqual([]);
-    expect(selectPrepared(entries, anchors[0]!.holdStart)).toEqual([]);
+    expect(selectPrepared(entries, anchors[0]!.holdStart).map(e=>e.id)).toContain("terminal-walk");
   });
 });
 
 describe("recorded tracking", () => {
   it("parses every shipped track file and types aircargo as a vehicle", () => {
-    for (const data of [s00, s01, s02, s03, aircargo]) expect(() => parseRecordedTracking(data)).not.toThrow();
+    for (const data of [terminalWalk, s00, s01, s02, s03, aircargo]) expect(() => parseRecordedTracking(data)).not.toThrow();
     expect(aircargo.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
-    for (const data of [s00, s01, s02, s03]) expect(data.tracks.every((t) => t.entityKind === "person")).toBe(true);
+    for (const data of [terminalWalk, s00, s01, s02, s03]) expect(data.tracks.every((t) => t.entityKind === "person")).toBe(true);
   });
 
   it("rejects an unknown entityKind", () => {
