@@ -19,3 +19,16 @@ OpenAI image generation produced the synthetic photographic stills. Existing emb
 | Interface code and procedural visual elements | Original project implementation | MIT |
 | Referenced system fonts | Installed on the viewer's device | Not bundled |
 | External library code | Resolved through the package lockfile | Respective upstream licenses |
+
+## Recorded feeds (optional)
+
+`public/assets/recorded-feeds/{s00,s01,s02,s03,aircargo}/` hold media used only when `?recordedFeed=1` is requested. Each directory has `loop.mp4` (muted H.264), `poster.jpg`, `tracking.json` and a `CREDITS.txt`. These are ordinary recorded replays shown inside a fictional interface, not live cameras, and the loop point is not guaranteed to be seamless.
+
+| Material | Origin | License |
+|---|---|---|
+| s00-s03 `loop.mp4` and `poster.jpg` | Excerpts of the MEVA dataset (Kitware, Inc. / IARPA) | CC BY 4.0, [MEVA data license](https://mevadata.org/resources/MEVA-data-license.txt) |
+| aircargo `loop.mp4` and `poster.jpg` | NASA's Goddard Space Flight Center, [SVS 12881](https://svs.gsfc.nasa.gov/12881/) | Public domain under the [NASA SVS policy](https://svs.gsfc.nasa.gov/help/), with credit; not relicensed as MIT |
+| All five `tracking.json` | Original project-authored marker bounds | CC BY 4.0 |
+| Application code that plays them | Original project implementation | MIT |
+
+The MIT license does not cover the media in this directory. Tracking files are hand-authored normalized bounds, not live inference and not an identification of any person or vehicle. Markers are neutral geometry only.

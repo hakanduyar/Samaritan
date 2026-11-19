@@ -20,6 +20,7 @@ import {
 } from "./time";
 import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SECONDS } from "./navigation";
 import { createAmbientRails } from "./ambient";
+import { createRecordedFeed, type RecordedFeedController } from "./recordedFeed";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
 import { createSamaritanPhoneFraming, isPhoneViewport } from "./samaritanFraming";
@@ -151,6 +152,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let lastFrameMs: number | null = null;
   let ready = false;
   let ambient: ReturnType<typeof createAmbientRails> | null = null;
+  // Opt-in (?recordedFeed=1), interactive mode only; absent otherwise.
+  let recordedFeed: RecordedFeedController | null = null;
   let ambientRenderElapsed = 0;
   let interactionReady = openingEnabled ? false : options.interactionReady ?? true;
   let autoplayStarted = false;
@@ -218,7 +221,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       if(!opening.maskedReturn||state.phase!=='return'){
         opening.rig.seek(state.clipTime);opening.prepare();renderer.render(opening.scene,opening.rig.camera);
       }
-    }else{currentTime=rig.seek(currentTime);ambient?.apply();renderer.render(scene,rig.camera);}
+    }else{
+      currentTime=rig.seek(currentTime);ambient?.apply();
+      // Only the interactive world is ever updated: never during the opening, and idle (released) under reduced motion or before interaction is ready.
+      recordedFeed?.update(interactionReady&&!reducedMotion?currentTime:Number.NEGATIVE_INFINITY,rig.camera);
+      renderer.render(scene,rig.camera);
+    }
     if(state && openingLabel!==state.phase+state.command){openingLabel=state.phase+state.command;options.onOpening?.({phase:state.phase,command:state.command});}
     needsRender = false;
     publish();
@@ -561,6 +569,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     rafId = 0;
     while (cleanups.length > 0) cleanups.pop()?.();
     opening?.dispose();opening=null;
+    recordedFeed?.dispose();recordedFeed=null;
     rig?.dispose();
     rig = null;
     ambient?.reset(); ambient = null;
@@ -728,6 +737,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
     // Measured from the admitted manifest anchors before the initial pose is rendered.
     if (world === "samaritan" && !exact && params.mode === "interactive") phoneFraming = createSamaritanPhoneFraming(gltf.scene, rig, manifest);
+
+    if (world === "samaritan" && params.mode === "interactive" && new URLSearchParams(win.location.search).get("recordedFeed") === "1") {
+      recordedFeed = createRecordedFeed(scene, doc, requestRender, manifest.anchors);
+    }
 
     currentTime = targetTime = params.requestedTime ?? 0;
     attachInput();

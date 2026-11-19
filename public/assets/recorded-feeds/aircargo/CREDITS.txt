@@ -1,0 +1,38 @@
+Recorded feed aircargo - credits, provenance and license
+========================================================
+
+Files in this directory
+  loop.mp4        about 9.67-second muted excerpt (H.264, 960x540, 30 fps)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker track (one neutral vehicle outline)
+  loop.mp4 SHA-256: 7409c289b9f7a65715f779e1e7786f643555d1b4d596127d670a5224d3a420f4
+
+Source
+  NASA Scientific Visualization Studio, "LAX - C5 cargo unloading at night":
+  https://svs.gsfc.nasa.gov/12881/
+  Excerpt: source seconds 6 to 15.7 of the night footage (fixed GoPro apron view).
+
+Attribution
+  Footage: NASA's Goddard Space Flight Center (videographers Michael McClare,
+  Sophia Roberts and Christopher Gunn).
+
+License
+  NASA SVS content is public domain unless otherwise noted; no exception is
+  indicated for this footage. Policy: https://svs.gsfc.nasa.gov/help/
+  NASA asks for credit, as given above. This is not an endorsement by NASA, and
+  the footage is not relicensed as MIT. Project-authored tracking.json is
+  offered under CC BY 4.0.
+
+Changes made (derivative material)
+  - Cut the night-only excerpt; resized to 960x540.
+  - Removed audio; re-encoded as H.264 MP4 at 30 fps.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: hand-annotated normalized
+    bounds (top-left origin) of the visible tractor, not output of live inference.
+
+Notes
+  - Finite recorded replay shown inside a fictional interface. It is not a live
+    camera. The loop is not seamless: the tractor exits and the trailer remains,
+    so the restart is a visible reset.
+  - The project's MIT license does not apply to this directory; the application
+    code remains MIT.

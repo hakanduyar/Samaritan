@@ -1,0 +1,41 @@
+Recorded feed s03 - credits, provenance and license
+==================================================
+
+Files in this directory
+  loop.mp4        27-second muted excerpt (H.264, 960x540, 30 fps)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker tracks
+  loop.mp4 SHA-256: ebdff6dfceaa8cb3d351b102f511b49eaa674680099a75d1b214ee230f870547
+
+Source
+  MEVA (Multiview Extended Video with Activities) dataset, camera school.G420 (school interior staircase landing), file:
+  https://mevadata-public-01.s3.amazonaws.com/drops-123-r13/2018-03-11/11/2018-03-11.11-20-00.11-25-00.school.G420.r13.avi
+  Excerpt: source seconds 156 to 183 of that file.
+
+Attribution
+  Video: MEVA, Kitware, Inc. / IARPA. https://mevadata.org/
+
+License
+  The source video is offered under the Creative Commons Attribution 4.0
+  International license (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+  Dataset license statement: https://mevadata.org/resources/MEVA-data-license.txt
+  Provided you give appropriate credit, link to the license and indicate if
+  changes were made, you may share and adapt the material. This file is a
+  summary, not the license.
+
+Changes made (derivative material)
+  - Cut the excerpt from the original recording in native time (no reverse, no retiming).
+  - Removed audio; re-encoded as H.264 MP4 within 960x540, aspect ratio preserved.
+  - Applied a small global luminance adjustment (eq brightness, -0.002 at the end of the excerpt, ramping linearly) to reduce the exposure seam at the loop point; no temporal pixel blending.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: hand-authored normalized
+    bounds (top-left origin), not output of live inference and not an
+    identification of any person. It is offered under CC BY 4.0.
+
+Notes
+  - Ordinary recorded replay shown inside a fictional interface. It is not a
+    live camera and the loop point is not guaranteed to be seamless.
+  - Not television footage; not affiliated with or endorsed by MEVA, Kitware,
+    IARPA or the original production.
+  - License scope: loop.mp4 and poster.jpg retain CC BY 4.0. The project's MIT
+    license does not apply to this directory; the application code remains MIT.
