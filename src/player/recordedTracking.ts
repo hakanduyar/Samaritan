@@ -180,56 +180,111 @@ export function drawHeadMarker(ctx: CanvasRenderingContext2D, width: number, hei
 }
 
 /**
- * Circular head frame: thin pale outer circle, subtle inner ring, side arcs and
- * the usual head corner frame; optionally a red outlined downward triangle.
- * Original canvas primitives; ring is capped in size and kept inside the canvas.
+ * Circular head frame, laid out in units of u = R/250 measured from the two
+ * accepted reference diagrams: translucent dark outer annulus (r 207-250), thin
+ * white ring (r 228), broad translucent grey band (r 170-207) around a clear
+ * centre, separate heavy side arcs (r 275), small inner side brackets, a tiny
+ * centre ring with four points, and a calibrated outer frame with corner
+ * crosses. Optional red outlined downward triangle spans the band's upper
+ * width down to the inner band edge. Original canvas primitives; the ring is
+ * centred on the true head centre, scales with the head (no size cap) and is
+ * clipped naturally by the canvas edge. The face stays visible (no opaque fill).
  */
 export function drawCircleMarker(ctx: CanvasRenderingContext2D, width: number, height: number, head: Head, redTriangle: boolean): void {
-  const hx = head.x * width, hy = head.y * height, hw = head.w * width, hh = head.h * height;
-  const r = Math.min(Math.max(Math.max(hw, hh) * 0.85, 9), 34, width / 2 - 6, height / 2 - 6);
-  const cx = Math.min(Math.max(hx + hw / 2, r + 4), width - r - 4);
-  const cy = Math.min(Math.max(hy + hh / 2, r + 4), height - r - 4);
-  const pad = Math.max(1.5, Math.max(hw, hh) * 0.18);
-  const bx = hx - pad, by = hy - pad, bw = hw + pad * 2, bh = hh + pad * 2;
-  const tick = Math.max(2, Math.min(bw, bh) * 0.3);
+  const hw = head.w * width, hh = head.h * height;
+  const cx = head.x * width + hw / 2, cy = head.y * height + hh / 2;
+  const R = Math.max(Math.max(hw, hh) * 0.85, 10);
+  const u = R / 250;
+  const lw = (n: number, min: number) => Math.max(n * u, min);
+  const TAU = Math.PI * 2;
   ctx.save();
   ctx.setLineDash([]);
   ctx.lineCap = "butt";
-  strokeTwice(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); }, 1);
-  ctx.globalAlpha = 0.55;
-  strokeTwice(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r * 0.74, 0, Math.PI * 2); }, 0.8);
-  ctx.globalAlpha = 1;
-  const ro = r + Math.min(3.5, Math.max(2, r * 0.14)), span = 0.38;
-  strokeTwice(ctx, () => {
+  ctx.lineJoin = "miter";
+  ctx.miterLimit = 10;
+  const ring = (r0: number, r1: number) => {
     ctx.beginPath();
-    ctx.arc(cx, cy, ro, -span, span);
-    ctx.moveTo(cx + Math.cos(Math.PI - span) * ro, cy + Math.sin(Math.PI - span) * ro);
-    ctx.arc(cx, cy, ro, Math.PI - span, Math.PI + span);
-  }, 1.4);
-  strokeTwice(ctx, () => {
+    ctx.arc(cx, cy, r1 * u, 0, TAU);
+    ctx.arc(cx, cy, r0 * u, 0, TAU, true);
+  };
+  // Subtle dark annulus, then broad translucent grey band.
+  ctx.fillStyle = "rgba(24,29,32,0.38)";
+  ring(207, 250);
+  ctx.fill("evenodd");
+  ctx.fillStyle = "rgba(112,119,123,0.34)";
+  ring(170, 207);
+  ctx.fill("evenodd");
+  // Thin white ring just inside the annulus.
+  ctx.strokeStyle = "rgba(255,255,255,0.92)";
+  ctx.lineWidth = lw(3, 1);
+  ctx.beginPath();
+  ctx.arc(cx, cy, 228 * u, 0, TAU);
+  ctx.stroke();
+  // Heavy separate outer side arcs.
+  const span = 0.37, ro = 275 * u;
+  ctx.lineWidth = lw(6, 1.4);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ro, -span, span);
+  ctx.moveTo(cx + Math.cos(Math.PI - span) * ro, cy + Math.sin(Math.PI - span) * ro);
+  ctx.arc(cx, cy, ro, Math.PI - span, Math.PI + span);
+  ctx.stroke();
+  // Small dark curved brackets inside the band, with faint level bars.
+  ctx.strokeStyle = "rgba(38,43,46,0.85)";
+  ctx.lineWidth = lw(3, 0.8);
+  for (const sx of [-1, 1]) {
+    const x0 = cx + sx * 190 * u, x1 = cx + sx * 172 * u;
     ctx.beginPath();
-    for (const [px, py, sx, sy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]] as const) {
-      ctx.moveTo(px + sx * tick, py);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px, py + sy * tick);
+    ctx.moveTo(x1, cy - 58 * u);
+    ctx.lineTo(x0, cy - 58 * u);
+    ctx.lineTo(x0 + sx * 3 * u, cy + 58 * u);
+    ctx.lineTo(x1, cy + 58 * u);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(60,66,70,0.55)";
+  ctx.lineWidth = lw(7, 1);
+  for (const sx of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + sx * 143 * u, cy);
+    ctx.lineTo(cx + sx * 187 * u, cy);
+    ctx.stroke();
+  }
+  // Centre ring and four calibration points.
+  ctx.strokeStyle = "rgba(20,24,27,0.7)";
+  ctx.lineWidth = lw(1.5, 0.6);
+  ctx.beginPath();
+  ctx.arc(cx, cy, 15 * u, 0, TAU);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  const d = Math.max(5 * u, 1.2);
+  for (const [px, py] of [[0, -69], [0, 69], [-69, 0], [69, 0]] as const) ctx.fillRect(cx + px * u - d / 2, cy + py * u - d / 2, d, d);
+  // Calibrated outer frame with corner crosses.
+  ctx.strokeStyle = "rgba(200,208,212,0.55)";
+  ctx.lineWidth = lw(1.2, 0.7);
+  const F = 260 * u, L = 230 * u, k = 9 * u;
+  ctx.beginPath();
+  for (const s of [-1, 1]) {
+    ctx.moveTo(cx - L, cy + s * F); ctx.lineTo(cx + L, cy + s * F);
+    ctx.moveTo(cx + s * F, cy - L); ctx.lineTo(cx + s * F, cy + L);
+    for (const t of [-1, 1]) {
+      ctx.moveTo(cx + s * F - k, cy + t * F); ctx.lineTo(cx + s * F + k, cy + t * F);
+      ctx.moveTo(cx + s * F, cy + t * F - k); ctx.lineTo(cx + s * F, cy + t * F + k);
     }
-  }, 1.1);
+  }
+  ctx.stroke();
   if (redTriangle) {
-    const tr = r * 0.68;
     const trace = () => {
       ctx.beginPath();
-      ctx.moveTo(cx - tr * 0.866, cy - tr * 0.5);
-      ctx.lineTo(cx + tr * 0.866, cy - tr * 0.5);
-      ctx.lineTo(cx, cy + tr);
+      ctx.moveTo(cx - 152 * u, cy - 88 * u);
+      ctx.lineTo(cx + 152 * u, cy - 88 * u);
+      ctx.lineTo(cx, cy + 170 * u);
       ctx.closePath();
     };
-    ctx.lineJoin = "miter";
-    ctx.strokeStyle = MARKER_OUTLINE;
-    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = "rgba(20,10,10,0.5)";
+    ctx.lineWidth = lw(12, 1.6) + 1.5;
     trace();
     ctx.stroke();
     ctx.strokeStyle = "#d8161b";
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = lw(12, 1.6);
     trace();
     ctx.stroke();
   }
