@@ -51,7 +51,13 @@ export function createExtendedHoldMap() {
 }
 
 /** Call once on the exact base clip, before creating the animation mixer. */
-export function extendRecordedRoute(root: Object3D, clips: AnimationClip[], manifest: SceneManifest): SceneManifest {
+export function extendRecordedRoute(
+  root: Object3D,
+  clips: AnimationClip[],
+  manifest: SceneManifest,
+  /** `continuationCopies: false` lets a bounded replacement field own the scenery: no extension_field_* slabs or tracks are built. */
+  options: { continuationCopies?: boolean } = {},
+): SceneManifest {
   if (manifest.world !== "samaritan" || manifest.clipName !== admission.clipName
     || manifest.durationSeconds !== admission.durationSeconds
     || JSON.stringify(manifest.anchors) !== JSON.stringify(admission.anchors)) return manifest;
@@ -180,7 +186,7 @@ export function extendRecordedRoute(root: Object3D, clips: AnimationClip[], mani
     times: [0, extensionStart, extensionStart + FADE_SECONDS], values: [opacity, opacity, 0],
   }));
 
-  // Bounded depth continuation: two copies of the existing deep strip templates
+  // Bounded depth continuation (standalone default): two copies of the existing deep strip templates
   // (field_depth_b4 + b5_deep, one 30-unit slab each) sharing geometry and
   // materials. Mirrored, jittered and thinned, with a clear corridor around the
   // camera/focus path. Revealed by animation as the camera approaches.
@@ -200,7 +206,7 @@ export function extendRecordedRoute(root: Object3D, clips: AnimationClip[], mani
     return z < final.z ? final : corridorPoints[0]!;
   };
   const finalZ = destinations[destinations.length - 1]!.z;
-  if (slabParent && slabSource.every(Boolean)) {
+  if (options.continuationCopies !== false && slabParent && slabSource.every(Boolean)) {
     let seed = 0x5eed1234;
     const random = () => {
       seed = (seed + 0x6d2b79f5) >>> 0;

@@ -20,6 +20,8 @@ import {
 } from "./time";
 import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SECONDS } from "./navigation";
 import { createAmbientRails } from "./ambient";
+import { createManualFieldWindow } from "./manualFieldWindow";
+import { makeSamaritanPanesOpaque } from "./samaritanOpacity";
 import { createRecordedFeed, type RecordedFeedController } from "./recordedFeed";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
@@ -153,6 +155,9 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   let lastFrameMs: number | null = null;
   let ready = false;
   let ambient: ReturnType<typeof createAmbientRails> | null = null;
+  // Interactive Samaritan only: bounded instanced field and its opaque-pane helper.
+  let field: ReturnType<typeof createManualFieldWindow> | null = null;
+  let restoreOpacity: (() => void) | null = null;
   // Opt-in (?recordedFeed=1), interactive mode only; absent otherwise.
   let recordedFeed: RecordedFeedController | null = null;
   let ambientRenderElapsed = 0;
@@ -224,6 +229,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       }
     }else{
       currentTime=rig.seek(currentTime);ambient?.apply(ambientRunning()?rig.camera:undefined);
+      field?.update();
       // Only the interactive world is ever updated: never during the opening, and idle (released) under reduced motion or before interaction is ready.
       recordedFeed?.update(interactionReady&&!reducedMotion?currentTime:Number.NEGATIVE_INFINITY,rig.camera);
       renderer.render(scene,rig.camera);
@@ -571,9 +577,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     while (cleanups.length > 0) cleanups.pop()?.();
     opening?.dispose();opening=null;
     recordedFeed?.dispose();recordedFeed=null;
+    // The field restores its removed original nodes (and the far plane) while the scene tree still exists.
+    field?.dispose(); field = null;
     rig?.dispose();
     rig = null;
     ambient?.dispose(); ambient = null;
+    restoreOpacity?.(); restoreOpacity = null;
     if (scene) disposeObjectTree(scene);
     scene = null;
     if (renderer) {
@@ -708,7 +717,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
     if (extendItinerary) {
       try {
-        manifest = extendRecordedRoute(gltf.scene, gltf.animations, manifest);
+        manifest = extendRecordedRoute(gltf.scene, gltf.animations, manifest, { continuationCopies: false });
         if (manifest.durationSeconds !== extendedSamaritanAdmission.durationSeconds) throw new Error("Recorded route extension was not applied");
         manualMap = createExtendedHoldMap();
       } catch (error) {
@@ -717,7 +726,10 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       }
     }
 
-    // Created after any route extension so the animated blocker/continuation
+    // Opaque panes first: ambient reels and the recorded feed clone from these materials. Interactive Samaritan only.
+    if (world === "samaritan" && params.mode === "interactive") restoreOpacity = makeSamaritanPanesOpaque(scene);
+
+    // Created after any route extension so the animated blocker
     // nodes and all ten focus/anchor names (base and extended) are protected.
     if (world === "samaritan" && params.mode === "interactive" && (manifest.clipName === "samaritan_interactive" || manifest.clipName === extendedSamaritanAdmission.clipName)) {
       ambient = createAmbientRails(scene, gltf.animations,
@@ -753,6 +765,19 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     // projection aspect is set to the source footage aspect (letterboxed).
     rig.camera.aspect = manifest.sourceAspectRatio;
     rig.camera.updateProjectionMatrix();
+
+    // The bounded field replaces the finite static continuation scenery (the extension's own slab copies were skipped above).
+    if (ambient) {
+      rig.seek(0);
+      field = createManualFieldWindow(scene, {
+        camera: rig.camera,
+        clips: gltf.animations,
+        protectedNames: [manifest.focalScreenName, ...(manifest.anchors ?? []).flatMap((anchor) => [anchor.screen, anchor.anchorNode]),
+          ...ambient.selection.map((item) => item.name)],
+        focusNames: [manifest.focalScreenName, ...(manifest.anchors ?? []).map((anchor) => anchor.screen)],
+        centreThinning: 0.9,
+      });
+    }
 
     // Measured from the admitted manifest anchors before the initial pose is rendered.
     if (world === "samaritan" && !exact && params.mode === "interactive") phoneFraming = createSamaritanPhoneFraming(gltf.scene, rig, manifest);

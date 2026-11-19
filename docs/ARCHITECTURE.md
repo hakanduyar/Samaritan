@@ -8,6 +8,8 @@ See [architecture decisions](decisions/README.md) for the current technology rat
 - `src/player/runtime.ts`: rendering, input, bounded manual traversal, playback and visibility lifecycle.
 - `src/player/Startup.tsx`: foreground-time opening sequence and interaction barrier.
 - `src/player/ambient.ts`: bounded static-rail selection with slow, stepped and continuous reel motion on a separate foreground clock; camera-aware recycling preserves focus panes and owns its temporary resources.
+- `src/player/manualFieldWindow.ts`: a bounded instanced field that follows the interactive camera, protects focused panes and restores replaced source nodes on disposal; it replaces the extended route's static continuation copies.
+- `src/player/samaritanOpacity.ts`: owned opaque-pane materials, preserving the route's animated foreground-blocker fades and restoring original materials during teardown.
 - `public/assets/samaritan/`: the bundled scene and minimal public manifest.
 - `tests/`: contract, timing, route and lifecycle checks.
 
