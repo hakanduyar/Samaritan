@@ -1,0 +1,47 @@
+Recorded feed moored-marina - credits, provenance and license
+=============================================================
+
+Files in this directory
+  loop.mp4        8-second silent stabilized excerpt (H.264 CRF 25, 960x540, faststart)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker tracks (two neutral vehicle outlines)
+  loop.mp4 SHA-256: CB1F3EA66034F080655CE0C92BDAC7120F1D0DC6F49B5F8CBF2670C7B5B5F12A
+
+Source
+  Mixkit, "Boats and yachts at a dock":
+  https://mixkit.co/free-stock-video/boats-and-yachts-at-a-dock-2069/
+  Direct file: https://assets.mixkit.co/videos/2069/2069-720.mp4
+  Original: 1280x720. Excerpt: source seconds 4-12 (8 seconds, 24 fps).
+
+Credit
+  Video: Mixkit (stock footage), https://mixkit.co
+
+License
+  Mixkit Stock Video Free License: https://mixkit.co/license/modal/videoFree/
+  and Mixkit Terms: https://mixkit.co/terms/. The license permits copying,
+  modifying and distributing the clip within a project; it does not permit
+  stock-style redistribution of the clip or unmodified commercial resale.
+  The video and poster are NOT MIT and NOT CC licensed. The original
+  tracking.json is offered under the MIT license.
+
+Changes made (derivative material)
+  - Cut source seconds 4-12.
+  - Global shore translation stabilization (vidstab, tripod reference frame 1,
+    rotation disabled); no zoom, no synthetic fill, no reverse, no fades.
+  - Fixed common crop 1248x702 at offset (16, 9), then scaled to 960x540;
+    audio removed; encoded as H.264 (CRF 25) with faststart.
+  - Natural small boat bob and water motion are retained.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: two hand-authored, constant
+    normalized boxes (top-left origin) around the hull and cabin of two central
+    moored boats, excluding reflections and thin antenna tips. They are
+    coarse bounds, not live inference or exact physical detection.
+
+Notes
+  - Stationary moored marina ambient recording; not a departing tug or ferry.
+    The source is only 8 seconds of ambient footage and the loop is not
+    mathematically seamless.
+  - Finite recorded replay shown inside a fictional interface, not a live
+    camera.
+
+Date: 2026-11-19

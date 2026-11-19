@@ -1,3 +1,4 @@
+import mooredMarina from "../public/assets/recorded-feeds/moored-marina/tracking.json";
 import parkedC17 from "../public/assets/recorded-feeds/parked-c17/tracking.json";
 import { describe, expect, it } from "vitest";
 
@@ -58,7 +59,7 @@ describe("recorded tracking", () => {
   });
 
   it("parses every shipped track file and types aircargo as a vehicle", () => {
-    for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03, s06, aircargo, parkedC17]) expect(() => parseRecordedTracking(data)).not.toThrow();
+    for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03, s06, aircargo, parkedC17, mooredMarina]) expect(() => parseRecordedTracking(data)).not.toThrow();
     expect(parkedC17.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
     expect(aircargo.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
     for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03]) expect(data.tracks.every((t) => t.entityKind === "person")).toBe(true);
