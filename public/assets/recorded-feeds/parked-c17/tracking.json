@@ -1,0 +1,13 @@
+{
+  "duration": 8,
+  "tracks": [
+    {
+      "id": "aircraft01",
+      "entityKind": "vehicle",
+      "keyframes": [
+        { "t": 0, "x": 0.0125, "y": 0.2889, "w": 0.9021, "h": 0.4019, "visible": true },
+        { "t": 8, "x": 0.0125, "y": 0.2889, "w": 0.9021, "h": 0.4019, "visible": true }
+      ]
+    }
+  ]
+}

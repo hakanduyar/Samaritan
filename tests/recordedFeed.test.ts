@@ -1,3 +1,4 @@
+import parkedC17 from "../public/assets/recorded-feeds/parked-c17/tracking.json";
 import { describe, expect, it } from "vitest";
 
 import manifest from "../public/assets/samaritan/manifest.json";
@@ -19,7 +20,7 @@ describe("recorded feed catalog", () => {
   it("maps six recorded feeds onto all six anchors without changing their order", () => {
     const entries = resolveCatalog(anchors);
     expect(entries.map((e) => e.anchorIndex)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(entries.map((e) => e.id)).toEqual(["terminal-walk", "porch-walk", "aircargo", "s01", "s02", "s03"]);
+    expect(entries.map((e) => e.id)).toEqual(["terminal-walk", "porch-walk", "parked-c17", "s01", "s02", "s03"]);
     expect(entries.map((e) => e.screen)).toEqual(["screen_01", "screen_02", "screen_03", "screen_04", "screen_05", "focal_screen"]);
     expect(entries[0]).toMatchObject({id:"terminal-walk",screen:"screen_01"});
     entries.forEach((e) => expect(e.holdStart).toBe(anchors[e.anchorIndex]!.holdStart));
@@ -29,7 +30,7 @@ describe("recorded feed catalog", () => {
     expect(resolveCatalog(undefined)).toEqual([]);
     expect(resolveCatalog(anchors.slice(0, 2)).map((e) => e.id)).toEqual(["terminal-walk", "porch-walk"]);
     const swapped = anchors.map((a, i) => (i === 2 ? { ...a, screen: "other" } : a));
-    expect(resolveCatalog(swapped).map((e) => e.id)).not.toContain("aircargo");
+    expect(resolveCatalog(swapped).map((e) => e.id)).not.toContain("parked-c17");
   });
 
   it("never prepares more than the current and nearest upcoming decoder", () => {
@@ -57,7 +58,8 @@ describe("recorded tracking", () => {
   });
 
   it("parses every shipped track file and types aircargo as a vehicle", () => {
-    for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03, s06, aircargo]) expect(() => parseRecordedTracking(data)).not.toThrow();
+    for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03, s06, aircargo, parkedC17]) expect(() => parseRecordedTracking(data)).not.toThrow();
+    expect(parkedC17.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
     expect(aircargo.tracks.every((t) => t.entityKind === "vehicle")).toBe(true);
     for (const data of [terminalWalk, porchWalk, s00, s01, s02, s03]) expect(data.tracks.every((t) => t.entityKind === "person")).toBe(true);
   });

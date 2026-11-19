@@ -1,0 +1,44 @@
+Recorded feed parked-c17 - credits, provenance and license
+==========================================================
+
+Files in this directory
+  loop.mp4        8-second silent excerpt (H.264 CRF 25, 960x540, faststart)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker track (one neutral vehicle outline)
+  loop.mp4 SHA-256: AE4A4A609BC5159B76370B36882B4FFA4A0C1057635DAB34FB3296191B1984CD
+
+Source
+  DVIDS, "C-17 B-Roll": https://www.dvidshub.net/video/437875/c-17-broll
+  Direct file: https://d34w7g4gy10iej.cloudfront.net/video/1511/DOD_102903982/DOD_102903982-1024x576-1769k.mp4
+  Excerpt: source seconds 378-386 only (the preceding second 376 is a
+  different camera angle and is not used). Scale: the official 1024x576
+  source (not the preview) resized to 960x540.
+
+Credit
+  Video: James Truitt / 88th Air Base Wing, U.S. Air Force.
+
+License
+  U.S. government work, public domain. DVIDS copyright conditions:
+  https://www.dvidshub.net/about/copyright
+  This is not an endorsement by DVIDS, the U.S. Air Force or the Department of
+  Defense. The video and poster are not relicensed as MIT. The original
+  tracking.json is offered under the MIT license.
+
+Changes made (derivative material)
+  - Cut seconds 378-386; resized to 960x540; audio removed;
+    re-encoded as H.264 (CRF 25) with faststart.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: one hand-authored,
+    fixed normalized box (top-left origin) around the whole parked aircraft,
+    not output of live inference.
+
+Notes
+  - Stationary parked C-17 ambient recording (static aircraft, ground unit
+    and camera, with natural cloud motion). It does not show truck loading or
+    departure, and the loop is not mathematically seamless.
+  - Finite recorded replay shown inside a fictional interface, not a live
+    camera.
+  - The project's MIT license does not apply to the video or poster; the
+    application code and tracking.json remain MIT.
+
+Date: 2026-11-19
