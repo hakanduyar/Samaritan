@@ -34,4 +34,4 @@ OpenAI image generation produced the synthetic photographic stills. Existing emb
 | All ten `tracking.json` | Original project-authored marker bounds | CC BY 4.0 |
 | Application code that plays them | Original project implementation | MIT |
 
-The MIT license does not cover the media in this directory. Tracking files are hand-authored normalized bounds, not live inference and not an identification of any person or vehicle. Markers are neutral geometry only.
+The MIT license does not cover the media in this directory. Tracking files are hand-authored normalized bounds, not live inference and not an identification of any person or vehicle. Markers are original canvas-drawn geometry only: an open triangle and two circular frame styles (one with a red outlined triangle), assigned to people tracks by a fixed authored rule. The circular styles are fan-reference-inspired display variation, not a canonical taxonomy, and imply no role, threat or identity. No reference image or vector data is included.

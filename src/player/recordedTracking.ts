@@ -7,9 +7,21 @@ export type EntityKind = "person" | "vehicle";
 export interface TrackKeyframe { t: number; x: number; y: number; w: number; h: number; visible: boolean }
 export interface TrackingTrack { id: string; role?: string; entityKind?: EntityKind; keyframes: TrackKeyframe[] }
 export interface RecordedTracking { duration: number; tracks: TrackingTrack[] }
-export interface Head { x: number; y: number; w: number; h: number; kind: EntityKind }
+/**
+ * Visual style only. Fan-reference-inspired display variation, authored per
+ * track; it is not a taxonomy and carries no meaning about the subject.
+ */
+export type MarkerStyle = "open-triangle" | "circle-frame" | "circle-red-triangle";
+export interface Head { x: number; y: number; w: number; h: number; kind: EntityKind; style?: MarkerStyle }
 
 const BOUNDS_EPSILON = 1e-5;
+const STYLE_CYCLE: readonly MarkerStyle[] = ["circle-frame", "circle-red-triangle", "open-triangle"];
+
+/** Stable authored style from the track id's trailing number (subject-01, -02, ...); no per-frame state. */
+export function markerStyleForTrack(id: string): MarkerStyle {
+  const n = /(\d+)$/.exec(id);
+  return n ? STYLE_CYCLE[(Number(n[1]) + STYLE_CYCLE.length - 1) % STYLE_CYCLE.length]! : "open-triangle";
+}
 
 export function parseRecordedTracking(value: unknown): RecordedTracking {
   const data = value as RecordedTracking | null;
@@ -49,8 +61,9 @@ export function parseRecordedTracking(value: unknown): RecordedTracking {
 export function sampleHeads(data: RecordedTracking, time: number): Head[] {
   if (!Number.isFinite(time) || time < 0 || time > data.duration) return [];
   const heads: Head[] = [];
-  for (const { keyframes, entityKind } of data.tracks) {
+  for (const { id, keyframes, entityKind } of data.tracks) {
     const kind = entityKind ?? "person";
+    const style = kind === "person" ? markerStyleForTrack(id) : undefined;
     const first = keyframes[0]!;
     const last = keyframes[keyframes.length - 1]!;
     if (time < first.t || time > last.t) continue;
@@ -61,7 +74,7 @@ export function sampleHeads(data: RecordedTracking, time: number): Head[] {
       if (frame.t >= time) { b = frame; break; }
     }
     if (!a.visible) continue;
-    if (b.t === a.t) { heads.push({ x: a.x, y: a.y, w: a.w, h: a.h, kind }); continue; }
+    if (b.t === a.t) { heads.push({ x: a.x, y: a.y, w: a.w, h: a.h, kind, style }); continue; }
     if (!b.visible) continue;
     const mix = (time - a.t) / (b.t - a.t);
     heads.push({
@@ -70,6 +83,7 @@ export function sampleHeads(data: RecordedTracking, time: number): Head[] {
       w: a.w + (b.w - a.w) * mix,
       h: a.h + (b.h - a.h) * mix,
       kind,
+      style,
     });
   }
   return heads;
@@ -142,6 +156,63 @@ export function drawHeadMarker(ctx: CanvasRenderingContext2D, width: number, hei
   ctx.restore();
 }
 
+/**
+ * Circular head frame: thin pale outer circle, subtle inner ring, side arcs and
+ * the usual head corner frame; optionally a red outlined downward triangle.
+ * Original canvas primitives; ring is capped in size and kept inside the canvas.
+ */
+export function drawCircleMarker(ctx: CanvasRenderingContext2D, width: number, height: number, head: Head, redTriangle: boolean): void {
+  const hx = head.x * width, hy = head.y * height, hw = head.w * width, hh = head.h * height;
+  const r = Math.min(Math.max(Math.max(hw, hh) * 0.85, 9), 34, width / 2 - 6, height / 2 - 6);
+  const cx = Math.min(Math.max(hx + hw / 2, r + 4), width - r - 4);
+  const cy = Math.min(Math.max(hy + hh / 2, r + 4), height - r - 4);
+  const pad = Math.max(1.5, Math.max(hw, hh) * 0.18);
+  const bx = hx - pad, by = hy - pad, bw = hw + pad * 2, bh = hh + pad * 2;
+  const tick = Math.max(2, Math.min(bw, bh) * 0.3);
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.lineCap = "butt";
+  strokeTwice(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); }, 1);
+  ctx.globalAlpha = 0.55;
+  strokeTwice(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r * 0.74, 0, Math.PI * 2); }, 0.8);
+  ctx.globalAlpha = 1;
+  const ro = r + Math.min(3.5, Math.max(2, r * 0.14)), span = 0.38;
+  strokeTwice(ctx, () => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, ro, -span, span);
+    ctx.moveTo(cx + Math.cos(Math.PI - span) * ro, cy + Math.sin(Math.PI - span) * ro);
+    ctx.arc(cx, cy, ro, Math.PI - span, Math.PI + span);
+  }, 1.4);
+  strokeTwice(ctx, () => {
+    ctx.beginPath();
+    for (const [px, py, sx, sy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]] as const) {
+      ctx.moveTo(px + sx * tick, py);
+      ctx.lineTo(px, py);
+      ctx.lineTo(px, py + sy * tick);
+    }
+  }, 1.1);
+  if (redTriangle) {
+    const tr = r * 0.68;
+    const trace = () => {
+      ctx.beginPath();
+      ctx.moveTo(cx - tr * 0.866, cy - tr * 0.5);
+      ctx.lineTo(cx + tr * 0.866, cy - tr * 0.5);
+      ctx.lineTo(cx, cy + tr);
+      ctx.closePath();
+    };
+    ctx.lineJoin = "miter";
+    ctx.strokeStyle = MARKER_OUTLINE;
+    ctx.lineWidth = 3.2;
+    trace();
+    ctx.stroke();
+    ctx.strokeStyle = "#d8161b";
+    ctx.lineWidth = 1.6;
+    trace();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /** Neutral object marker for vehicles: a plain rectangle outline, never a head triangle. */
 export function drawObjectOutline(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head): void {
   ctx.save();
@@ -155,5 +226,7 @@ export function drawObjectOutline(ctx: CanvasRenderingContext2D, width: number, 
 
 export function drawMarker(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head): void {
   if (entity.kind === "vehicle") drawObjectOutline(ctx, width, height, entity);
+  else if (entity.style === "circle-frame") drawCircleMarker(ctx, width, height, entity, false);
+  else if (entity.style === "circle-red-triangle") drawCircleMarker(ctx, width, height, entity, true);
   else drawHeadMarker(ctx, width, height, entity);
 }
