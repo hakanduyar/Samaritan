@@ -42,6 +42,8 @@ pnpm start
 - Home/End: navigate to the route boundaries.
 - `/samaritan?mode=reference&t=10&qa=1`: exact authored-time inspection with diagnostic controls.
 
+- `/samaritan?recordedFeed=1` (optional, interactive mode only): five of the six stops show ordinary recorded excerpts instead of stills; the first stop keeps its original still. Nothing plays during the opening, and exact (`mode=reference`) and reduced-motion views are unchanged. The excerpts are plain recorded loops, not live cameras, and the loop point is not guaranteed to be seamless. Markers are hand-authored for this project, not live inference. See [recorded-feed credits](ASSETS.md#recorded-feeds-optional).
+
 The opening completes before interactive navigation begins. The authored route lasts approximately 107.12 seconds at 1× playback. Manual navigation uses bounded acceleration and compressed stationary holds; playback retains the full authored timing. A small, bounded subset of distant screen cells moves independently while idle; focused screens remain stable.
 
 ## Project status

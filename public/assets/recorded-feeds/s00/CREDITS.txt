@@ -1,0 +1,40 @@
+Recorded feed s00 - credits, provenance and license
+==================================================
+
+Files in this directory
+  loop.mp4        14-second muted excerpt (H.264, 960x540, 30 fps)
+  poster.jpg      still frame used as the poster
+  tracking.json   authored marker tracks
+  loop.mp4 SHA-256: 0d79753301d34930d7b9a874c3f5ae8cba7baba93473eee7da3aeee5b822d2d3
+
+Source
+  MEVA (Multiview Extended Video with Activities) dataset, camera bus.G507 (indoor bus terminal waiting room), file:
+  https://mevadata-public-01.s3.amazonaws.com/drop-5-mevid/2018-05-18.14-15-01.14-20-01.bus.G507.r13.avi
+  Excerpt: source seconds 100 to 114 of that file.
+
+Attribution
+  Video: MEVA, Kitware, Inc. / IARPA. https://mevadata.org/
+
+License
+  The source video is offered under the Creative Commons Attribution 4.0
+  International license (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+  Dataset license statement: https://mevadata.org/resources/MEVA-data-license.txt
+  Provided you give appropriate credit, link to the license and indicate if
+  changes were made, you may share and adapt the material. This file is a
+  summary, not the license.
+
+Changes made (derivative material)
+  - Cut the excerpt from the original recording in native time (no reverse, no retiming).
+  - Removed audio; re-encoded as H.264 MP4 within 960x540, aspect ratio preserved.
+  - Extracted a still frame as the poster.
+  - tracking.json is original work of this project: hand-authored normalized
+    bounds (top-left origin), not output of live inference and not an
+    identification of any person. It is offered under CC BY 4.0.
+
+Notes
+  - Ordinary recorded replay shown inside a fictional interface. It is not a
+    live camera and the loop point is not guaranteed to be seamless.
+  - Not television footage; not affiliated with or endorsed by MEVA, Kitware,
+    IARPA or the original production.
+  - License scope: loop.mp4 and poster.jpg retain CC BY 4.0. The project's MIT
+    license does not apply to this directory; the application code remains MIT.
