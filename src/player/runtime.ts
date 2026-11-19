@@ -22,6 +22,7 @@ import { advanceNavigation, navigationTarget, HOLD_DELAY_SECONDS, MAX_PENDING_SE
 import { createAmbientRails } from "./ambient";
 
 import { createHoldMap, navigationMap, focusEntry, withinFocus } from './holdMapping';
+import { createSamaritanPhoneFraming, isPhoneViewport } from "./samaritanFraming";
 import { advanceTouchTrip, createTouchTrip, hasTouchCapability, isTouchTap, swipeDirection, touchStop, type TouchTrip } from "./touchNavigation";
 
 import { loadOpeningSequence } from './openingSequence';
@@ -134,6 +135,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   let opening: Awaited<ReturnType<typeof loadOpeningSequence>> | null = null;
   let openingLabel = "";
+  let phoneFraming: ReturnType<typeof createSamaritanPhoneFraming> | null = null;
   let currentTime = 0;
   let targetTime = 0;
   let navigationVelocity = 0;
@@ -245,7 +247,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         handedOff=true;currentTime=targetTime=0;navigationVelocity=0;
         heldKeys.clear();heldSeconds=0;resetTouch();ambient?.reset();
         interactionReady=true;
-        if(options.openingSequence==='straight')layout();
+        if(options.openingSequence==='straight'||phoneFraming)layout();
       }
     }
     if (!exact && heldKeys.size > 0 && interactionReady) {
@@ -351,7 +353,12 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     const frozenReturn=straightVisible&&opening?.clock.snapshot().phase==='return';
     const width=Math.max(host.clientWidth,host.clientHeight*manifest.sourceAspectRatio);
     const height=width/manifest.sourceAspectRatio;
-    const rect = straightVisible || (world==='samaritan' && !exact)
+    // Phones render the whole viewport directly so focused panes are not cropped by the cover canvas.
+    const openingVisible = opening?.clock.snapshot().phase !== undefined && opening.clock.snapshot().phase !== 'complete';
+    const phone = Boolean(phoneFraming) && !openingVisible && isPhoneViewport(win, host.clientWidth, host.clientHeight);
+    const rect = phone
+      ? {x:0,y:0,width:host.clientWidth,height:host.clientHeight}
+      : straightVisible || (world==='samaritan' && !exact)
       ? {x:(host.clientWidth-width)/2,y:(host.clientHeight-height)/2,width,height}
       : letterbox(host.clientWidth, host.clientHeight, manifest.sourceAspectRatio);
     frame.style.left = `${rect.x}px`;
@@ -360,6 +367,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     frame.style.height = `${rect.height}px`;
     // CSS cover-fit can resize the frozen command without clearing its buffer.
     if(frozenReturn)return;
+    if(phoneFraming){ if(phone) phoneFraming.fit(host.clientWidth,host.clientHeight); else phoneFraming.restore(); }
     renderer.setPixelRatio(Math.min(win.devicePixelRatio || 1, maxPixelRatio));
     renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
     requestRender();
@@ -717,6 +725,9 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     // projection aspect is set to the source footage aspect (letterboxed).
     rig.camera.aspect = manifest.sourceAspectRatio;
     rig.camera.updateProjectionMatrix();
+
+    // Measured from the admitted manifest anchors before the initial pose is rendered.
+    if (world === "samaritan" && !exact && params.mode === "interactive") phoneFraming = createSamaritanPhoneFraming(gltf.scene, rig, manifest);
 
     currentTime = targetTime = params.requestedTime ?? 0;
     attachInput();
