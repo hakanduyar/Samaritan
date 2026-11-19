@@ -1,0 +1,21 @@
+{
+  "duration": 8,
+  "tracks": [
+    {
+      "id": "boat01",
+      "entityKind": "vehicle",
+      "keyframes": [
+        { "t": 0, "x": 0.526, "y": 0.2037, "w": 0.1938, "h": 0.513, "visible": true },
+        { "t": 8, "x": 0.526, "y": 0.2037, "w": 0.1938, "h": 0.513, "visible": true }
+      ]
+    },
+    {
+      "id": "boat02",
+      "entityKind": "vehicle",
+      "keyframes": [
+        { "t": 0, "x": 0.3469, "y": 0.3167, "w": 0.15, "h": 0.2741, "visible": true },
+        { "t": 8, "x": 0.3469, "y": 0.3167, "w": 0.15, "h": 0.2741, "visible": true }
+      ]
+    }
+  ]
+}
