@@ -13,25 +13,43 @@ interface Knot { x:number; y:number }
 
 interface RouteOffset {x:number;y:number}
 const STOP_OFFSETS:RouteOffset[]=[
- {x:0,y:0},{x:3,y:1.2},{x:3,y:1.2},
- {x:4.5,y:1.2},{x:-1,y:0},{x:-1,y:1.8},
+ {x:0,y:0},{x:3.4,y:1.5},{x:3.4,y:1.5},
+ {x:5,y:1.2},{x:-1,y:0},{x:-1,y:1.8},
 ];
-type LegKind='forward'|'xy'|'yx'|'forward-x'|'forward-y';
-const LEG_KINDS:LegKind[]=['forward','xy','forward','forward-x','xy','forward-y'];
+/**
+ * Curated, non-repeating leg vocabulary (one per route leg):
+ * forward only; lateral+vertical with no depth change; forward combined with a
+ * lateral/vertical drift; and a forward side-pass that swings out and returns.
+ */
+export type LegKind='forward'|'xy'|'yx'|'forward-x'|'forward-y'|'pass';
+const LEG_KINDS:LegKind[]=['forward','xy','forward','pass','yx','forward-y'];
+const isSideways=(kind:LegKind|undefined)=>kind==='xy'||kind==='yx';
+/** Side-pass swing, world units, beyond the straight lateral interpolation. */
+const PASS_SWING=1.1;
 
-/** Ordered dolly sublegs, not an excursion returning to the same centreline. */
+/**
+ * One leg's pose from `progress` 0..1. Every channel runs on an overlapping
+ * smoothstep window, so the camera is never held near-still mid-leg (unlike
+ * sequential eased halves) while still leaving and entering each hold softly.
+ * Depth channel `forward` is a plain time fraction (the authored curve eases it).
+ */
 export function journeyLeg(progress:number,from:RouteOffset,to:RouteOffset,kind:LegKind='forward') {
- const ease=(value:number)=>{const t=Math.max(0,Math.min(1,value));return t*t*t*(t*(t*6-15)+10);};
  const p=Math.max(0,Math.min(1,progress));
- if(kind==='forward')return {...to,forward:p};
- const sidewaysOnly=kind==='xy'||kind==='yx';
- const first=ease(p/.5),second=ease((p-.5)/.5);
- const afterForward=ease((p-.58)/.42);
+ const win=(a:number,b:number)=>{const t=Math.max(0,Math.min(1,(p-a)/(b-a)));return t*t*(3-2*t);};
+ const dx=to.x-from.x,dy=to.y-from.y;
+ let sx=win(0,1),sy=win(0,1),swing=0;
+ switch(kind){
+  case 'xy':sx=win(0,.8);sy=win(.2,1);break;
+  case 'yx':sy=win(0,.8);sx=win(.2,1);break;
+  case 'forward-x':sx=win(.15,1);sy=win(.3,1);break;
+  case 'forward-y':sy=win(.15,1);sx=win(.3,1);break;
+  case 'pass':sx=win(.05,.95);sy=win(.2,1);swing=(dx<0?-1:1)*PASS_SWING*Math.sin(Math.PI*win(0,1));break;
+ }
  return {
-  x:from.x+(to.x-from.x)*(sidewaysOnly?(kind==='yx'?second:first):afterForward),
-  y:from.y+(to.y-from.y)*(sidewaysOnly?(kind==='yx'?first:second):afterForward),
-  // Sideways-only routes really keep their depth; other routes finish sideways.
-  forward:sidewaysOnly?0:Math.min(1,p/.58),
+  x:from.x+dx*sx+swing,
+  y:from.y+dy*sy,
+  // Sideways-only legs keep their depth; every other leg advances.
+  forward:isSideways(kind)?0:p,
  };
 }
 
@@ -98,7 +116,7 @@ export function expandJourney(scene:Object3D, clips:AnimationClip[], manifest:Sc
  // camera receive the same accumulated depth shift, preserving its lens pose.
  let accumulatedDepthShift=0;
  const depthShifts=holds.map((hold,index)=>{
-  if(LEG_KINDS[index]==='xy'||LEG_KINDS[index]==='yx'){
+  if(isSideways(LEG_KINDS[index])){
    const previousTime=index===0?0:holds[index-1]!.holdEnd;
    accumulatedDepthShift+=depth(remap(route,along(sampleZ(old,previousTime))))
     -depth(remap(route,along(sampleZ(old,hold.holdStart))));

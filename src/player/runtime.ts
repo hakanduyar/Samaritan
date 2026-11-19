@@ -481,7 +481,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
         wheel.preventDefault();
         if (!interactionReady || doc.hidden) return;
         playing = false;
-        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.duration, exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE);
+        const delta = wheelDeltaSeconds(wheel.deltaY, wheel.deltaMode, host.clientHeight, manualMap.nominalDuration, exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE);
         applyManualDelta(delta);
       },
       { passive: false },
@@ -559,7 +559,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       const dy = drag.y - pointer.clientY;
       drag.y = pointer.clientY;
       playing = false;
-      applyManualDelta((dy / (exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE)) * manualMap.duration);
+      applyManualDelta((dy / (exact ? REFERENCE_PIXELS_PER_ROUTE : MANUAL_PIXELS_PER_ROUTE)) * manualMap.nominalDuration);
     });
     const cancelSwipe = () => {
       swipe = null;
