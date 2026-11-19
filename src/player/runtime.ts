@@ -1,4 +1,4 @@
-import { LoadingManager, Mesh, WebGLRenderer, type Camera, type ColorRepresentation, type Object3D } from "three";
+import { LoadingManager, Mesh, Texture, WebGLRenderer, WebGLRenderTarget, type Camera, type ColorRepresentation, type Object3D } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import {
@@ -37,6 +37,14 @@ const MAX_FRAME_DELTA_SECONDS = 0.1;
 const MANUAL_PIXELS_PER_ROUTE = 14000;
 const REFERENCE_PIXELS_PER_ROUTE = 24000;
 
+/** seek/prepare already update matrices; avoid traversing the world twice. */
+function renderPrepared(renderer: RendererLike, scene: Object3D, camera: Camera) {
+  const automatic = scene.matrixWorldAutoUpdate;
+  scene.matrixWorldAutoUpdate = false;
+  try { renderer.render(scene, camera); }
+  finally { scene.matrixWorldAutoUpdate = automatic; }
+}
+
 export interface RendererLike {
   domElement: HTMLCanvasElement;
   setPixelRatio(ratio: number): void;
@@ -45,6 +53,10 @@ export interface RendererLike {
   render(scene: Object3D, camera: Camera): void;
   dispose(): void;
   forceContextLoss?(): void;
+  compileAsync?(scene: Object3D, camera: Camera): Promise<unknown>;
+  initTexture?(texture: Texture): void;
+  getRenderTarget?(): WebGLRenderTarget | null;
+  setRenderTarget?(target: WebGLRenderTarget | null): void;
 }
 
 export type PlayerStatus =
@@ -139,6 +151,8 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   let opening: Awaited<ReturnType<typeof loadOpeningSequence>> | null = null;
   let openingLabel = "";
+  let commandKey = "";
+  let commandDirty = true;
   let phoneFraming: ReturnType<typeof createSamaritanPhoneFraming> | null = null;
   let currentTime = 0;
   let targetTime = 0;
@@ -220,20 +234,36 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
 
   const renderNow = () => {
     if (!rig || !renderer || !scene) return;
-    const state=opening?.clock.snapshot();
-    if(state){marker.dataset.openingPhase=state.phase;marker.dataset.openingTime=formatTime(state.clipTime);}
+    let state=opening?.clock.snapshot();
     if(opening && state && state.phase!=='complete'){
-      // Keep the opaque command frame during the straight variant's masked return.
       if(!opening.maskedReturn||state.phase!=='return'){
-        opening.rig.seek(state.clipTime);opening.prepare();renderer.render(opening.scene,opening.rig.camera);
+        // Straight commands: redraw only when command, 0.5s blink, clip time or an explicit invalidation changes.
+        const key=options.openingSequence==='straight'&&state.phase==='commands'?`${state.command}|${Math.floor(Math.max(0,state.blinkTime)/.5)%2}|${state.clipTime}`:'';
+        if(key&&!commandDirty&&key===commandKey){/* identical visible frame: keep the drawn buffer */}
+        else{
+          opening.rig.seek(state.clipTime);opening.prepare();renderPrepared(renderer,opening.scene,opening.rig.camera);
+          // prepare() may start the commands; report the state actually drawn.
+          state=opening.clock.snapshot();
+          commandKey=options.openingSequence==='straight'&&state.phase==='commands'?`${state.command}|${Math.floor(Math.max(0,state.blinkTime)/.5)%2}|${state.clipTime}`:'';commandDirty=false;
+        }
+      }else{
+        // Hold the command camera, not a frozen framebuffer: the signal keeps blinking.
+        const key=`return|${Math.floor(Math.max(0,state.blinkTime)/.5)%2}`;
+        if(commandDirty||key!==commandKey){
+          opening.prepare();renderPrepared(renderer,opening.scene,opening.rig.camera);
+          commandKey=key;commandDirty=false;
+        }
       }
     }else{
+      opening?.restoreWorld();
+      commandKey="";
       currentTime=rig.seek(currentTime);ambient?.apply(ambientRunning()?rig.camera:undefined);
       field?.update();
       // Only the interactive world is ever updated: never during the opening, and idle (released) under reduced motion or before interaction is ready.
       recordedFeed?.update(interactionReady&&!reducedMotion?currentTime:Number.NEGATIVE_INFINITY,rig.camera);
-      renderer.render(scene,rig.camera);
+      renderPrepared(renderer,scene,rig.camera);
     }
+    if(state){marker.dataset.openingPhase=state.phase;marker.dataset.openingTime=formatTime(state.clipTime);}
     if(state && openingLabel!==state.phase+state.command){openingLabel=state.phase+state.command;options.onOpening?.({phase:state.phase,command:state.command});}
     needsRender = false;
     publish();
@@ -314,7 +344,7 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   }
 
   const requestRender = () => {
-    needsRender = true;
+    needsRender = true;commandDirty = true;
     schedule();
   };
 
@@ -365,7 +395,6 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
   const layout = () => {
     if (!renderer || !manifest) return;
     const straightVisible=options.openingSequence==='straight'&&opening?.clock.snapshot().phase!=='complete';
-    const frozenReturn=straightVisible&&opening?.clock.snapshot().phase==='return';
     const width=Math.max(host.clientWidth,host.clientHeight*manifest.sourceAspectRatio);
     const height=width/manifest.sourceAspectRatio;
     // Phones render the whole viewport directly so focused panes are not cropped by the cover canvas.
@@ -376,15 +405,23 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
       : straightVisible || (world==='samaritan' && !exact)
       ? {x:(host.clientWidth-width)/2,y:(host.clientHeight-height)/2,width,height}
       : letterbox(host.clientWidth, host.clientHeight, manifest.sourceAspectRatio);
-    frame.style.left = `${rect.x}px`;
-    frame.style.top = `${rect.y}px`;
-    frame.style.width = `${rect.width}px`;
-    frame.style.height = `${rect.height}px`;
-    // CSS cover-fit can resize the frozen command without clearing its buffer.
-    if(frozenReturn)return;
+    // Straight opening (and its handoff): render only the visible host through a centred view offset over the cover size.
+    const cover = options.openingSequence === 'straight' && !phone;
+    const view = cover ? {x:0,y:0,width:host.clientWidth,height:host.clientHeight} : rect;
+    frame.style.left = `${view.x}px`;
+    frame.style.top = `${view.y}px`;
+    frame.style.width = `${view.width}px`;
+    frame.style.height = `${view.height}px`;
     if(phoneFraming){ if(phone) phoneFraming.fit(host.clientWidth,host.clientHeight); else phoneFraming.restore(); }
+    if(cover && view.width>0 && view.height>0){
+      for(const camera of [rig?.camera,opening?.rig.camera]){
+        if(!camera)continue;
+        camera.aspect=width/height;
+        camera.setViewOffset(width,height,-rect.x,-rect.y,view.width,view.height);
+      }
+    }
     renderer.setPixelRatio(Math.min(win.devicePixelRatio || 1, maxPixelRatio));
-    renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+    renderer.setSize(Math.max(1, view.width), Math.max(1, view.height), false);
     requestRender();
   };
 
@@ -791,6 +828,55 @@ export function createPlayer(options: PlayerOptions): PlayerHandle {
     layout();
     if (rafId !== 0) win.cancelAnimationFrame(rafId);
     rafId = 0;
+    if (opening) {
+      // Prepare offscreen materials before the timed flight reaches them.
+      // Otherwise first-use shader compilation and atlas uploads stall motion.
+      opening.rig.seek(0); opening.prepare();
+      const prewarmRenderer = renderer;
+      const initSceneTextures = (target: Object3D) => {
+        const textures = new Set<Texture>();
+        target.traverse(node => {
+          if (!(node instanceof Mesh)) return;
+          for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+            for (const value of Object.values(material)) if (value instanceof Texture) textures.add(value);
+          }
+        });
+        for (const texture of textures) prewarmRenderer.initTexture?.(texture);
+      };
+      initSceneTextures(opening.scene);
+      await renderer.compileAsync?.(opening.scene, opening.rig.camera);
+      if (disposed || terminal) return;
+      // Also prepare the manual scene for the later handoff, still under the
+      // covered loading state. The opening world is restored first so
+      // opening-hidden manual objects are compiled, then the opening state is
+      // re-applied for the first frame.
+      if (opening.scene !== scene) {
+        opening.restoreWorld();
+        initSceneTextures(scene);
+        await renderer.compileAsync?.(scene, rig.camera);
+        if (disposed || terminal) return;
+        // One synchronous first draw into a 1x1 offscreen target (buffer uploads,
+        // first material use) with the manual ambient/field state the handoff
+        // frame uses. The visible canvas is never drawn to; the previous target is
+        // restored and the temporary target is always disposed. Recorded feeds are
+        // deliberately not updated: no decoder or video work before the opening ends.
+        if (prewarmRenderer.getRenderTarget && prewarmRenderer.setRenderTarget) {
+          const previousTarget = prewarmRenderer.getRenderTarget();
+          const warmTarget = new WebGLRenderTarget(1, 1);
+          try {
+            prewarmRenderer.setRenderTarget(warmTarget);
+            currentTime = rig.seek(currentTime);
+            ambient?.apply(rig.camera);
+            field?.update();
+            renderPrepared(prewarmRenderer, scene, rig.camera);
+          } finally {
+            prewarmRenderer.setRenderTarget(previousTarget);
+            warmTarget.dispose();
+          }
+        }
+        opening.rig.seek(0); opening.prepare();
+      }
+    }
     renderNow();
 
     // Ready only after the frame for the requested time has been rendered and

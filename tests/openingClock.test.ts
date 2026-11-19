@@ -12,11 +12,36 @@ it('speeds forward travel only while preserving connection, command dwell and re
  const before=clock.snapshot().visualTime;
  clock.advance((straight.phases.approach.end-1.12)/1.12+.001,false);
  expect(clock.snapshot().phase).toBe('commands');
- expect(clock.snapshot().visualTime).toBeGreaterThan(before); // Blink clock never resets at the phase change.
+ expect(clock.snapshot().visualTime).toBeGreaterThan(before); // Overall visual time stays monotonic.
  expect(clock.advance(2.9,false).phase).toBe('commands');
  expect(clock.advance(.11,false).phase).toBe('return');
  expect(clock.advance(.2,false).clipTime).toBeCloseTo(straight.phases.return.start+.2);
  expect(()=>createOpeningClock(straight,0)).toThrow();
+});
+it('adds a short loading phase and accelerates the straight flight within nine seconds',()=>{
+ const straight=validateOpening(JSON.parse(readFileSync('public/assets/samaritan/opening-straight/opening-metadata.json','utf8')),true);
+ const clock=createOpeningClock(straight,1.12,1.5,9);
+ expect(clock.advance(1.49,false).phase).toBe('loading');
+ expect(clock.advance(.02,false).phase).toBe('connection');
+ expect(clock.advance(1,false).phase).toBe('world');
+ const first=clock.advance(1,false).clipTime;
+ clock.advance(6,false);const later=clock.snapshot().clipTime;
+ const lateStep=clock.advance(1,false).clipTime-later;
+ expect(lateStep).toBeGreaterThan(first);
+ expect(clock.advance(1,false).phase).toBe('commands');
+ expect(clock.snapshot().blinkTime).toBe(0);
+});
+it('starts commands at the covering pane pose and keeps the blink clock running through return',()=>{
+ const straight=validateOpening(JSON.parse(readFileSync('public/assets/samaritan/opening-straight/opening-metadata.json','utf8')),true);
+ const clock=createOpeningClock(straight,1.12,0,9);
+ clock.advance(1,false);clock.advance(7,false);
+ const pose=straight.phases.approach.start;
+ expect(clock.startCommands(pose)).toBe(true);
+ expect(clock.snapshot()).toMatchObject({phase:'commands',clipTime:pose,command:'WHAT',blinkTime:0});
+ expect(clock.startCommands(pose)).toBe(false);
+ clock.advance(3,false);
+ expect(clock.snapshot()).toMatchObject({phase:'return',blinkTime:3});
+ expect(clock.advance(.25,false).blinkTime).toBe(3.25);
 });
 it('holds commands for visible time and does not skip the stage on a long frame',()=>{
  const clock=createOpeningClock(meta);
