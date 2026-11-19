@@ -782,10 +782,10 @@ it('integrates straight opening into one clock with early input/hidden guards an
  expect(m.marker.dataset.state).not.toBe('ready');expect(m.openingStates).toHaveLength(0);
  releaseDecode();await until(()=>m.marker.dataset.state==='ready','both real bundles ready');
  const first=m.renderer.frames[0]!.position;
- expect(m.openingStates.at(-1)!.phase).toBe('connection');
+ expect(m.openingStates.at(-1)!.phase).toBe('loading');
  Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'));runFrames(1,30000);
  Object.defineProperty(document,'hidden',{value:false,configurable:true});document.dispatchEvent(new Event('visibilitychange'));runFrames(1,100);
- expect(m.openingStates.at(-1)!.phase).toBe('connection');
+ expect(m.openingStates.at(-1)!.phase).toBe('loading');
  const vignette=m.renderer.scene!.getObjectByName('fx_vignette') as Mesh;
  const vignetteOpacity=()=>Array.isArray(vignette.material)?NaN:vignette.material.opacity;
  expect(vignetteOpacity()).toBe(0);
@@ -794,7 +794,9 @@ it('integrates straight opening into one clock with early input/hidden guards an
  wheel(m.host,3000);m.handle.controller.seek(20);m.handle.controller.setInteractionReady();
  expect(m.handle.controller.getSnapshot()!.targetTime).toBe(0);
  expect((pane.material as unknown as {map:{isCanvasTexture:boolean}}).map.isCanvasTexture).toBe(true); // Symbol replaces photo before approach.
- runFrames(25,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
+ runFrames(12,100);expect(m.openingStates.at(-1)!.phase).toBe('loading');
+ runFrames(4,100);expect(m.openingStates.at(-1)!.phase).toBe('connection');
+ runFrames(11,100);expect(m.openingStates.at(-1)!.phase).toBe('world');
  expect(vignetteOpacity()).toBe(0); // white opening edges throughout travel, normal-world material is separate
  expect(paint).not.toHaveBeenCalled(); // Triangle-only surface is already present; words start at full coverage.
  for(let i=0;i<Math.ceil(metadata.phases.approach.end/.112)+5&&m.openingStates.at(-1)!.phase!=='commands';i++)runFrames(1,100);expect(m.openingStates.at(-1)!.phase).toBe('commands');expect(vignetteOpacity()).toBe(0);
@@ -808,15 +810,14 @@ it('integrates straight opening into one clock with early input/hidden guards an
  runFrames(1,100);expect(m.renderer.frames.at(-1)!.position).toEqual(focus);
  for(let i=0;i<40&&m.openingStates.at(-1)!.phase!=='return';i++)runFrames(1,100);
  expect(m.openingStates.at(-1)!.phase).toBe('return');expect(pane.material).toBe(commandMaterial);expect(vignetteOpacity()).toBe(0);
- const frozenSize=[...m.renderer.size];
  Object.defineProperty(m.host,'clientWidth',{value:390,configurable:true});
  Object.defineProperty(m.host,'clientHeight',{value:844,configurable:true});
  window.dispatchEvent(new Event('resize'));
- expect(m.renderer.size).toEqual(frozenSize);
+ expect(m.renderer.size).toEqual([390,844]); // Resize the visible viewport while preserving the command camera pose.
  const presentation=m.host.children[1] as HTMLElement;
  expect(parseFloat(presentation.style.width)).toBeGreaterThanOrEqual(390);
  expect(parseFloat(presentation.style.height)).toBeGreaterThanOrEqual(844);
- const frozenCount=m.renderer.frames.length;runFrames(2,100);expect(m.renderer.frames).toHaveLength(frozenCount);expect(m.renderer.frames.at(-1)!.position).toEqual(focus);
+ const returnFrameCount=m.renderer.frames.length;runFrames(2,100);expect(m.renderer.frames.length).toBeGreaterThan(returnFrameCount);expect(m.renderer.frames.at(-1)!.position).toEqual(focus); // Keep redrawing the blinking triangle while the command pose stays fixed.
  runFrames(80,100);expect(m.openingStates.at(-1)!.phase).toBe('complete');
  expect(m.openingStates.filter(x=>x.phase==='complete')).toHaveLength(1);
  expect(m.renderer.frames.at(-1)!.position).toEqual([0,0,0]);expect(first).not.toEqual([0,0,0]);

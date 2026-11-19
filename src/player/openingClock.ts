@@ -1,4 +1,4 @@
-export type OpeningPhase='connection'|'world'|'commands'|'return'|'complete';
+export type OpeningPhase='loading'|'connection'|'world'|'commands'|'return'|'complete';
 export interface OpeningContract {durationSeconds:number;paneNode:string;openingClipName:string;openingCameraName:string;commandOpaqueMask?:{start:number;end:number};phases:{approach:{start:number;end:number};paneHold:{start:number;end:number};return:{start:number;end:number;hidden?:boolean}};handoff:{interactiveTimeSeconds:number}}
 export function validateOpening(value:unknown,straight=false):OpeningContract {
  const m=value as OpeningContract;
@@ -9,18 +9,35 @@ export function validateOpening(value:unknown,straight=false):OpeningContract {
  return m;
 }
 /** One foreground clock; discarded phase overshoot guarantees commands get a presented dwell. */
-export function createOpeningClock(meta:OpeningContract,travelRate=1){
+export function openingTravelTime(seconds:number,duration:number,end:number,initialRate:number) {
+ const time=Math.max(0,Math.min(duration,seconds));
+ return initialRate*time+(end-initialRate*duration)*(time/duration)**3;
+}
+/** Additional physical distance, joining the authored approach with zero residual velocity. */
+export function openingDistanceOffset(clipTime:number,approachStart:number) {
+ const progress=Math.max(0,Math.min(1,clipTime/approachStart));
+ return 32*(1-progress*progress*(3-2*progress));
+}
+export function createOpeningClock(meta:OpeningContract,travelRate=1,initialLoading=0,travelSeconds?:number){
  if(!Number.isFinite(travelRate)||travelRate<=0)throw Error('Invalid opening travel rate');
- let phase:OpeningPhase='connection',elapsed=0,visualTime=0;
- const snapshot=()=>({phase,visualTime,clipTime:phase==='connection'?0:phase==='world'?elapsed:phase==='commands'?meta.phases.paneHold.start:phase==='return'?meta.phases.return.start+elapsed:meta.durationSeconds,command:phase==='commands'?['WHAT','ARE','YOUR','COMMANDS','SAMARITAN'][Math.min(4,Math.floor(elapsed/.6))]!:''});
- return {snapshot,advance(seconds:number,reduced:boolean){
+ if(travelSeconds!==undefined&&(!Number.isFinite(travelSeconds)||travelSeconds<=0||travelRate*travelSeconds>meta.phases.approach.end))throw Error('Invalid accelerating opening duration');
+ let phase:OpeningPhase=initialLoading>0?'loading':'connection',elapsed=0,visualTime=0,holdClip:number|null=null,worldElapsed=0;
+ // Command entry starts the blink on; subsequent half-seconds fully switch it off/on.
+ const snapshot=()=>({phase,visualTime,blinkTime:phase==='commands'?elapsed:phase==='return'?3+elapsed:visualTime,clipTime:phase==='connection'||phase==='loading'?0:phase==='world'?elapsed:phase==='commands'?holdClip??meta.phases.paneHold.start:phase==='return'?meta.phases.return.start+elapsed:meta.durationSeconds,command:phase==='commands'?['WHAT','ARE','YOUR','COMMANDS','SAMARITAN'][Math.min(4,Math.floor(elapsed/.6))]!:''});
+ return {snapshot,/** Early pose-preserving command start (world phase only); visualTime stays continuous. */startCommands(clipTime:number){
+  if(phase!=='world'||!Number.isFinite(clipTime))return false;
+  holdClip=Math.min(Math.max(clipTime,meta.phases.approach.start),meta.phases.paneHold.start);phase='commands';elapsed=0;return true;
+ },advance(seconds:number,reduced:boolean){
   const delta=Number.isFinite(seconds)?Math.max(0,seconds):0;
   if(phase==='complete')return snapshot();
   visualTime+=delta;
+  if(phase==='loading'){elapsed+=delta;if(elapsed>=initialLoading){phase='connection';elapsed=0;}return snapshot();}
   if(phase==='connection'){elapsed+=delta;if(elapsed>=1){phase=reduced?'commands':'world';elapsed=0;}return snapshot();}
   if(reduced&&phase==='world'){phase='commands';elapsed=0;return snapshot();}
   if(reduced&&phase==='return'){phase='complete';elapsed=0;return snapshot();}
-  elapsed+=delta*(phase==='world'?travelRate:1);
+  if(phase==='world'&&travelSeconds!==undefined){
+   worldElapsed+=delta;elapsed=openingTravelTime(worldElapsed,travelSeconds,meta.phases.approach.end,travelRate);
+  }else elapsed+=delta*(phase==='world'?travelRate:1);
   if(phase==='world'&&elapsed>=meta.phases.approach.end){phase='commands';elapsed=0;}
   else if(phase==='commands'&&elapsed>=3){phase=reduced?'complete':'return';elapsed=0;}
   else if(phase==='return'&&elapsed>=meta.durationSeconds-meta.phases.return.start){phase='complete';elapsed=0;}
