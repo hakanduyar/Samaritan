@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import manifest from "../public/assets/samaritan/manifest.json";
 import { MAX_DECODERS, resolveCatalog, selectPrepared } from "../src/player/recordedCatalog";
-import { headTriangle, parseRecordedTracking, sampleHeads, type Head } from "../src/player/recordedTracking";
+import { drawHeadMarker, drawCircleMarker, drawObjectOutline, parseRecordedTracking, sampleHeads, type Head } from "../src/player/recordedTracking";
 
 import terminalWalk from "../public/assets/recorded-feeds/terminal-walk/tracking.json";
 import s00 from "../public/assets/recorded-feeds/s00/tracking.json";
@@ -44,6 +44,39 @@ describe("recorded feed catalog", () => {
 });
 
 describe("recorded tracking", () => {
+  function drawingTrace(draw: (ctx: CanvasRenderingContext2D) => void) {
+    const calls: Array<{name:string; args:unknown[]}> = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: (_target, name) => (...args:unknown[]) => { calls.push({name:String(name),args}); },
+      set: (target, name, value) => { target[String(name)] = value; return true; },
+    }) as unknown as CanvasRenderingContext2D;
+    draw(ctx);
+    return calls;
+  }
+
+  it("renders the legacy fallback as the centered reference circle, including a partially visible head", () => {
+    for (const x of [0.4, -0.015]) {
+      const head:Head = {x,y:0.2,w:0.05,h:0.07,kind:"person",style:"open-triangle"};
+      expect(drawingTrace(ctx => drawHeadMarker(ctx,960,540,head)))
+        .toEqual(drawingTrace(ctx => drawCircleMarker(ctx,960,540,head,false)));
+    }
+  });
+
+  it("centers a compact vehicle glyph without changing full object bounds", () => {
+    const head:Head = {x:0.1,y:0.2,w:0.8,h:0.4,kind:"vehicle"};
+    const before = {...head};
+    const calls = drawingTrace(ctx => drawObjectOutline(ctx,960,540,head));
+    const arc = calls.find(c => c.name === "arc")!.args as number[];
+    const rect = calls.find(c => c.name === "rect")!.args as number[];
+    expect(arc[0]).toBeCloseTo(480);
+    expect(arc[1]).toBeCloseTo(216);
+    expect(rect[2]).toBeCloseTo(rect[3]!);
+    expect(rect[2]).toBeLessThan(70);
+    expect(rect[0]! + rect[2]! / 2).toBeCloseTo(480);
+    expect(rect[1]! + rect[3]! / 2).toBeCloseTo(216);
+    expect(head).toEqual(before);
+  });
+
   it("keeps per-person styles stable through interpolation without styling vehicles", () => {
     const keyframes = [{ t: 0, x: 0.1, y: 0.2, w: 0.05, h: 0.07, visible: true }, { t: 2, x: 0.4, y: 0.2, w: 0.05, h: 0.07, visible: true }];
     const data = parseRecordedTracking({ duration: 2, tracks: [
@@ -81,12 +114,5 @@ describe("recorded tracking", () => {
     expect(sampleHeads(data, 3.5)).toEqual([]);
   });
 
-  it("keeps the head triangle inside the frame, even for a head at the top edge", () => {
-    const head: Head = { x: 0.5, y: 0, w: 0.02, h: 0.04, kind: "person" };
-    const g = headTriangle(960, 540, head);
-    expect(g.baseY).toBeGreaterThanOrEqual(0);
-    expect(g.apexY).toBeGreaterThan(g.baseY);
-    expect(g.left).toBeGreaterThanOrEqual(0);
-    expect(g.right).toBeLessThanOrEqual(960);
-  });
+
 });
