@@ -8,8 +8,8 @@ import rests from "./holdRestAdmission.json";
 import { createHoldMap, TRAVEL_SPEEDUP, type Hold } from "./holdMapping";
 
 import { journeyLeg, type LegKind } from "./journeyExpansion";
-/** Extension legs: lateral+vertical, drifting forward, side-pass, forward with vertical drift. */
-const EXTENSION_LEGS: LegKind[] = ["xy", "forward-x", "pass", "forward-y"];
+/** Extension legs: lateral+vertical, then curated last three: xy (lateral+rise), pass (forward left arc), yx (descent then settle). */
+const EXTENSION_LEGS: LegKind[] = ["xy", "xy", "pass", "yx"];
 
 /** Last extension build: counts for review/diagnostics only. */
 export const budget = { hiddenForeground: 0, continuationNodes: 0 };
@@ -87,9 +87,10 @@ export function extendRecordedRoute(
   const extension: Array<{ time: number; value: number[] }> = [];
   const destinations=[
     {x:end[0]!+2.5,y:end[1]!-1,z:end[2]!},
-    {x:end[0]!+4,y:end[1]!-1,z:end[2]!+delta[2]!},
-    {x:end[0]!+2.5,y:end[1]!-1,z:end[2]!+2*delta[2]!},
-    {x:end[0]!+4,y:end[1]!-1,z:end[2]!+3*delta[2]!},
+    // Curated last three: lateral+rise (no depth), forward left arc, vertical descent then left settle (no depth).
+    {x:end[0]!+5,y:end[1]!+1.25,z:end[2]!},
+    {x:end[0]!+1.25,y:end[1]!+0.25,z:end[2]!+delta[2]!},
+    {x:end[0]!-1.25,y:end[1]!-2,z:end[2]!+delta[2]!},
   ];
   for (let index = 0; index < FEEDS.length; index++) {
     const start = admission.durationSeconds + index * (TRAVEL_SECONDS + HOLD_SECONDS);
