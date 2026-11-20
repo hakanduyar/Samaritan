@@ -39,5 +39,18 @@ it('lengthens travel while preserving focus composition, hold timing and all ten
  expect(extended.anchors).toHaveLength(10);
  expect(extended.anchors!.slice(0,6)).toEqual(manifest.anchors);
  expect(resolveCatalog(extended.anchors!).map(entry=>entry.id)).toEqual(['terminal-walk','porch-walk','parked-c17','s01','s02','s03','moored-marina','s04','s05','s06']);
+ const finalRig=createSceneRig(candidate.scene,candidate.animations,extended);
+ const positions=extended.anchors!.slice(6).map(anchor=>{
+  finalRig.seek(anchor.holdStart);
+  return finalRig.camera.getWorldPosition(new Vector3());
+ });
+ const deltas=positions.slice(1).map((p,i)=>p.clone().sub(positions[i]!));
+ expect(Math.abs(deltas[0]!.z)).toBeLessThan(.02);
+ expect(deltas[0]!.x).toBeGreaterThan(2);
+ expect(deltas[0]!.y).toBeGreaterThan(2);
+ expect(deltas[1]!.z).toBeLessThan(-1);
+ expect(Math.abs(deltas[2]!.z)).toBeLessThan(.02);
+ expect(deltas[2]!.y).toBeLessThan(-2);
+ finalRig.dispose();
  original.dispose();
 });
