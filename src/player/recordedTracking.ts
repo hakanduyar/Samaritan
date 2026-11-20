@@ -161,33 +161,6 @@ export function sampleHeads(data: RecordedTracking, time: number): Head[] {
 const MARKER_LIGHT = "#f2f2ee";
 const MARKER_OUTLINE = "rgba(20,20,20,0.7)";
 
-export interface TriangleGeometry {
-  apexX: number;
-  apexY: number;
-  left: number;
-  right: number;
-  baseY: number;
-  box: { x: number; y: number; w: number; h: number };
-}
-
-/**
- * Open-head marker layout in canvas pixels: a downward-pointing triangle sits
- * just above the head with its apex toward it, sized from the head box and kept
- * inside the frame. Pure so it can be tested without a canvas.
- */
-export function headTriangle(width: number, height: number, head: Head): TriangleGeometry {
-  const hx = head.x * width, hy = head.y * height, hw = head.w * width, hh = head.h * height;
-  const pad = Math.max(1.5, Math.max(hw, hh) * 0.18);
-  const box = { x: hx - pad, y: hy - pad, w: hw + pad * 2, h: hh + pad * 2 };
-  const base = Math.min(Math.max(hw * 1.1, 9), 40);
-  const rise = base * 0.8;
-  const gap = Math.max(1.5, hh * 0.1);
-  // Prefer above the head; with no room the triangle stays in frame, overlapping the head box.
-  const apexY = Math.max(box.y - gap, rise + 1);
-  const cx = Math.min(Math.max(hx + hw / 2, base / 2 + 1), width - base / 2 - 1);
-  return { apexX: cx, apexY, left: cx - base / 2, right: cx + base / 2, baseY: apexY - rise, box };
-}
-
 function strokeTwice(ctx: CanvasRenderingContext2D, trace: () => void, lineWidth: number) {
   ctx.lineJoin = "miter";
   ctx.strokeStyle = MARKER_OUTLINE;
@@ -200,29 +173,9 @@ function strokeTwice(ctx: CanvasRenderingContext2D, trace: () => void, lineWidth
   ctx.stroke();
 }
 
-/** Neutral head marker: open (unfilled) triangle plus minimal corner ticks, light stroke over a dark outline. */
+/** Default head marker: the centered circle-frame style. */
 export function drawHeadMarker(ctx: CanvasRenderingContext2D, width: number, height: number, head: Head): void {
-  const g = headTriangle(width, height, head);
-  const tick = Math.max(2, Math.min(g.box.w, g.box.h) * 0.3);
-  ctx.save();
-  ctx.setLineDash([]);
-  strokeTwice(ctx, () => {
-    ctx.beginPath();
-    ctx.moveTo(g.left, g.baseY);
-    ctx.lineTo(g.right, g.baseY);
-    ctx.lineTo(g.apexX, g.apexY);
-    ctx.closePath();
-  }, 1.4);
-  strokeTwice(ctx, () => {
-    const { x, y, w, h } = g.box;
-    ctx.beginPath();
-    for (const [px, py, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]] as const) {
-      ctx.moveTo(px + sx * tick, py);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px, py + sy * tick);
-    }
-  }, 1.2);
-  ctx.restore();
+  drawCircleMarker(ctx, width, height, head, false);
 }
 
 /**
@@ -337,14 +290,26 @@ export function drawCircleMarker(ctx: CanvasRenderingContext2D, width: number, h
   ctx.restore();
 }
 
-/** Neutral object marker for vehicles: a plain rectangle outline, never a head triangle. */
+/**
+ * Neutral object marker for vehicles: a compact circle inside a square frame,
+ * centred on the full object bbox. Radius is bounded by the object's short side
+ * and the image size, so it never scales with the body's long side. Unfilled
+ * (light stroke over dark outline); clipped naturally at the canvas edge.
+ */
 export function drawObjectOutline(ctx: CanvasRenderingContext2D, width: number, height: number, entity: Head): void {
+  const ow = entity.w * width, oh = entity.h * height;
+  const cx = entity.x * width + ow / 2, cy = entity.y * height + oh / 2;
+  const imageShort = Math.min(width, height);
+  const r = Math.max(Math.min(Math.min(ow, oh) * 0.18, imageShort * 0.045), 1);
+  const f = r * 1.35;
+  const lineWidth = Math.max(1, imageShort * 0.0018);
   ctx.save();
   ctx.setLineDash([]);
   strokeTwice(ctx, () => {
     ctx.beginPath();
-    ctx.rect(entity.x * width, entity.y * height, entity.w * width, entity.h * height);
-  }, 1.4);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.rect(cx - f, cy - f, f * 2, f * 2);
+  }, lineWidth);
   ctx.restore();
 }
 
